@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "宠物成长日记 - 记录爱宠的每一个成长瞬间"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "宠物成长日记主入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "宠物成长日记"
+    }
+  ]
+}

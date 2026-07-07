@@ -10,3 +10,18 @@
 /.clang-tidy
 **/.test
 /.appanalyzer
+
+# Build artifacts
+*.hap
+*.app
+*.har
+*.hsp
+.output/
+/.preview/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

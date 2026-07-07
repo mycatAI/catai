@@ -4,7 +4,7 @@ import { PetViewModel } from '../viewmodel/PetViewModel'
 import { GrowthChart } from '../components/GrowthChart'
 import { AddRecordDialog } from '../components/AddRecordDialog'
 import { DateUtil } from '../common/Utils'
-import { router } from '@kit.ArkUI'
+import { router, IDataSource, DataChangeListener } from '@kit.ArkUI'
 
 /**
  * 成长记录页面

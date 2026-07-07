@@ -1,3 +1,5 @@
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
+
 /**
  * 照片上传组件
  * 支持选择照片并预览
@@ -94,24 +96,25 @@ export struct PhotoUpload {
 
   private calculateGridHeight(): number {
     const rowCount = Math.ceil((this.photos.length + (this.editable ? 1 : 0)) / 3)
-    const itemSize = 100 // approximate item height
+    const itemSize = 100
     const gap = 8 * (rowCount - 1)
     return rowCount * itemSize + gap
   }
 
   private async selectPhoto(): Promise<void> {
     try {
-      // 使用 photoAccessHelper 选择照片
-      const photoAccessHelper = require('@kit.MediaLibraryKit').photoAccessHelper
       const context = getContext(this)
       const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context)
+
       const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions()
       photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
       photoSelectOptions.maxSelectNumber = this.maxCount - this.photos.length
 
-      const uris: string[] = await phAccessHelper.PhotoViewPicker.select(photoSelectOptions)
-      if (uris && uris.length > 0) {
-        const newPhotos = [...this.photos, ...uris]
+      const photoPicker = new photoAccessHelper.PhotoViewPicker()
+      const result = await photoPicker.select(photoSelectOptions)
+
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        const newPhotos = [...this.photos, ...result.photoUris]
         if (this.onPhotosChange) {
           this.onPhotosChange(newPhotos)
         }

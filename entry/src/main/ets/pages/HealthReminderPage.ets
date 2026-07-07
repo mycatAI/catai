@@ -1,4 +1,4 @@
-import { HealthReminder, ReminderType, REPEAT_CYCLE_LABELS } from '../model/HealthReminder'
+import { HealthReminder, ReminderType } from '../model/HealthReminder'
 import { ReminderViewModel } from '../viewmodel/ReminderViewModel'
 import { ReminderCard } from '../components/ReminderCard'
 import { DateUtil } from '../common/Utils'

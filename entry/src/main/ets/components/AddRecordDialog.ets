@@ -1,5 +1,6 @@
 import { GrowthRecord, GrowthRecordType, GROWTH_TYPE_LABELS, GROWTH_TYPE_ICONS } from '../model/GrowthRecord'
 import { DateUtil } from '../common/Utils'
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
 /**
  * 添加成长记录弹窗组件
@@ -202,7 +203,7 @@ export struct AddRecordDialog {
           .backgroundColor('#FFF8E1')
           .borderRadius(8)
           .onClick(() => {
-            // 照片选择逻辑（简化版）
+            this.selectPhoto()
           })
       }
     }
@@ -244,6 +245,23 @@ export struct AddRecordDialog {
         .backgroundColor('#FAFAFA')
         .borderRadius(8)
         .onChange((value: string) => { this.notes = value })
+    }
+  }
+
+  private async selectPhoto(): Promise<void> {
+    try {
+      const context = getContext(this)
+      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context)
+      const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions()
+      photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+      photoSelectOptions.maxSelectNumber = 1
+      const photoPicker = new photoAccessHelper.PhotoViewPicker()
+      const result = await photoPicker.select(photoSelectOptions)
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.photo = result.photoUris[0]
+      }
+    } catch (err) {
+      console.error('[AddRecordDialog] 选择照片失败:', JSON.stringify(err))
     }
   }
 

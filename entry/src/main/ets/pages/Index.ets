@@ -94,6 +94,9 @@ struct Index {
   async saveNewPet(): Promise<void> {
     if (!this.editPetName.trim()) return
     const pet = this.petVM.editingPet
+    // 绑定当前登录用户
+    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
+    if (uid) pet.userId = uid
     pet.name = this.editPetName
     pet.species = this.editPetSpecies
     pet.breed = this.editPetBreed
@@ -133,7 +136,9 @@ struct Index {
         pets: this.petVM.pets,
         selectedPetId: this.petVM.selectedPetId,
         onSelect: (petId: string) => { this.onPetSelected(petId) },
-        onAdd: () => { this.openAddDialog() }
+        onAdd: () => {
+          if (this.isLoggedIn()) { this.openAddDialog() }
+        }
       })
 
       Divider().height(1).color('#F5F5F5')
@@ -194,6 +199,22 @@ struct Index {
       .backgroundColor('#FFF8E1')
       .onClick(() => {
         this.showPetList = !this.showPetList
+      })
+
+      // 宠友圈按钮
+      Button() {
+        Text('🔥')
+          .fontSize(16)
+      }
+      .width(36)
+      .height(36)
+      .borderRadius(18)
+      .backgroundColor('#FFF3E0')
+      .margin({ left: 8 })
+      .onClick(() => {
+        if (this.isLoggedIn()) {
+          router.pushUrl({ url: 'pages/TopicFeedPage' })
+        }
       })
 
       // 设置按钮

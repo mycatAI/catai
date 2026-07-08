@@ -5,6 +5,25 @@ import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
+/** 宠物关注话题 */
+interface PetTopic {
+  id: string
+  icon: string
+  name: string
+}
+const PET_TOPICS: PetTopic[] = [
+  { id: 'get_along', icon: '🤝', name: '如何相处' },
+  { id: 'diet', icon: '🍖', name: '饮食健康' },
+  { id: 'train', icon: '🎾', name: '训练技巧' },
+  { id: 'medical', icon: '🏥', name: '医疗护理' },
+  { id: 'groom', icon: '✂️', name: '美容清洁' },
+  { id: 'behavior', icon: '🐕', name: '行为解读' },
+  { id: 'travel', icon: '🚗', name: '出行攻略' },
+  { id: 'breed', icon: '📚', name: '品种知识' },
+  { id: 'play', icon: '🎮', name: '互动游戏' },
+  { id: 'emotion', icon: '💕', name: '情感陪伴' }
+]
+
 /**
  * 我的页面
  * 展示用户个人信息和宠物简介
@@ -20,6 +39,7 @@ struct MyPage {
   @State editPhone: string = ''
   @State editEmail: string = ''
   @State editAvatar: string = ''
+  @State editTopics: string[] = []
   @State isNewUser: boolean = false
 
   aboutToAppear(): void {
@@ -61,24 +81,35 @@ struct MyPage {
     this.editPhone = this.user.phone
     this.editEmail = this.user.email
     this.editAvatar = this.user.avatar
+    this.editTopics = this.user.topics ? this.user.topics.split(',') : []
     this.isEditing = true
+  }
+
+  // 切换话题选中状态
+  toggleTopic(topicId: string): void {
+    const idx = this.editTopics.indexOf(topicId)
+    if (idx >= 0) {
+      this.editTopics.splice(idx, 1)
+    } else {
+      this.editTopics.push(topicId)
+    }
+    // 触发响应式更新
+    this.editTopics = [...this.editTopics]
   }
 
   // 保存用户信息
   async saveUserInfo(): Promise<void> {
     const db = DatabaseService.getInstance()
-    // 先关闭弹窗，立即响应
     this.isEditing = false
-    // 构建新对象替换整个 user，确保 @State 触发 UI 刷新
     const updatedUser = new UserInfo(this.user)
     updatedUser.username = this.editUsername
     updatedUser.bio = this.editBio
     updatedUser.phone = this.editPhone
     updatedUser.email = this.editEmail
     updatedUser.avatar = this.editAvatar
+    updatedUser.topics = this.editTopics.join(',')
     updatedUser.updateTime = DateUtil.today()
     this.user = updatedUser
-    // 异步保存到数据库
     await db.updateUserInfo(this.user)
   }
 
@@ -258,6 +289,11 @@ struct MyPage {
       .padding({ top: 14, bottom: 14 })
       .backgroundColor('#FFF8E1')
       .borderRadius(10)
+
+      // 关注的话题
+      if (this.user.topics) {
+        this.buildTopicTags()
+      }
     }
     .width('100%')
     .padding(18)
@@ -461,6 +497,42 @@ struct MyPage {
     }
   }
 
+  @Builder
+  private buildTopicTags(): void {
+    Column() {
+      Text('🏷️ 关注话题')
+        .fontSize(12)
+        .fontColor('#9E9E9E')
+        .width('100%')
+        .margin({ top: 14, bottom: 6 })
+
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.getUserTopics(), (topic: PetTopic) => {
+          Text(topic.icon + ' ' + topic.name)
+            .fontSize(11)
+            .fontColor('#FF6F00')
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor('#FFF8E1')
+            .borderRadius(12)
+            .margin({ right: 6, bottom: 4 })
+        })
+      }
+      .width('100%')
+    }
+  }
+
+  // 解析用户话题为 PetTopic 数组
+  private getUserTopics(): PetTopic[] {
+    if (!this.user.topics) return []
+    const ids = this.user.topics.split(',')
+    const result: PetTopic[] = []
+    for (const id of ids) {
+      const found = PET_TOPICS.find(t => t.id === id)
+      if (found) result.push(found)
+    }
+    return result
+  }
+
   // 获取当前登录用户ID
   private getLoginUserId(): string {
     const uid = AppStorage.get<string>(CURRENT_USER_KEY)
@@ -567,6 +639,32 @@ struct MyPage {
             .borderRadius(8)
             .margin({ bottom: 14 })
             .onChange((v: string) => { this.editEmail = v })
+
+          // 关注话题
+          this.buildLabel('关注话题')
+          Column() {
+            ForEach(PET_TOPICS, (topic: PetTopic) => {
+              Row() {
+                Text(topic.icon + ' ' + topic.name)
+                  .fontSize(14)
+                  .fontColor(this.editTopics.indexOf(topic.id) >= 0 ? '#FF6F00' : '#424242')
+                Blank()
+                if (this.editTopics.indexOf(topic.id) >= 0) {
+                  Text('✓')
+                    .fontSize(14)
+                    .fontColor('#FF6F00')
+                    .fontWeight(FontWeight.Bold)
+                }
+              }
+              .width('100%')
+              .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+              .backgroundColor(this.editTopics.indexOf(topic.id) >= 0 ? '#FFF8E1' : '#FAFAFA')
+              .borderRadius(8)
+              .margin({ bottom: 6 })
+              .onClick(() => { this.toggleTopic(topic.id) })
+            })
+          }
+          .margin({ bottom: 14 })
         }
         .padding({ left: 20, right: 20 })
       }

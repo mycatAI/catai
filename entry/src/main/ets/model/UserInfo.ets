@@ -19,6 +19,8 @@ export class UserInfo {
   email: string = ''
   /** 注册日期 */
   joinDate: string = ''
+  /** 关注的话题（逗号分隔） */
+  topics: string = ''
   /** 更新日期 */
   updateTime: string = ''
 
@@ -31,6 +33,7 @@ export class UserInfo {
       this.bio = data.bio ?? this.bio
       this.phone = data.phone ?? this.phone
       this.email = data.email ?? this.email
+      this.topics = data.topics ?? this.topics
       this.joinDate = data.joinDate ?? this.joinDate
       this.updateTime = data.updateTime ?? this.updateTime
     }

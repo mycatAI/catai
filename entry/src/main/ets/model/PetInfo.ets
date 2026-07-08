@@ -4,6 +4,8 @@
 export class PetInfo {
   /** 宠物唯一ID */
   id: string = ''
+  /** 所属用户ID */
+  userId: string = ''
   /** 宠物名称 */
   name: string = ''
   /** 物种：狗/猫/其他 */
@@ -32,6 +34,7 @@ export class PetInfo {
   constructor(data?: PetInfo) {
     if (data) {
       this.id = data.id ?? this.id
+      this.userId = data.userId ?? this.userId
       this.name = data.name ?? this.name
       this.species = data.species ?? this.species
       this.breed = data.breed ?? this.breed

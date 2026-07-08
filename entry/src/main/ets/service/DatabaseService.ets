@@ -5,6 +5,19 @@ import { UserInfo } from '../model/UserInfo'
 import { relationalStore } from '@kit.ArkData'
 import { BusinessError } from '@kit.BasicServicesKit'
 
+/** 社区动态数据 */
+export interface FeedPostData {
+  id: number
+  userId: string
+  topicId: string
+  content: string
+  author: string
+  avatar: string
+  likes: number
+  comments: number
+  createTime: string
+}
+
 const STORE_CONFIG: relationalStore.StoreConfig = {
   name: 'PetDiary.db',
   securityLevel: relationalStore.SecurityLevel.S1
@@ -13,6 +26,7 @@ const STORE_CONFIG: relationalStore.StoreConfig = {
 const SQL_CREATE_PET_INFO = `
   CREATE TABLE IF NOT EXISTS pet_info (
     id TEXT PRIMARY KEY,
+    user_id TEXT DEFAULT '',
     name TEXT NOT NULL,
     species TEXT DEFAULT '',
     breed TEXT DEFAULT '',
@@ -59,6 +73,20 @@ const SQL_CREATE_HEALTH_REMINDER = `
   )
 `
 
+const SQL_CREATE_FEED_POST = `
+  CREATE TABLE IF NOT EXISTS feed_post (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    topic_id TEXT DEFAULT '',
+    content TEXT DEFAULT '',
+    author TEXT DEFAULT '',
+    avatar TEXT DEFAULT '',
+    likes INTEGER DEFAULT 0,
+    comments INTEGER DEFAULT 0,
+    create_time TEXT DEFAULT ''
+  )
+`
+
 const SQL_CREATE_USER_INFO = `
   CREATE TABLE IF NOT EXISTS user_info (
     id TEXT PRIMARY KEY,
@@ -68,6 +96,7 @@ const SQL_CREATE_USER_INFO = `
     bio TEXT DEFAULT '',
     phone TEXT DEFAULT '',
     email TEXT DEFAULT '',
+    topics TEXT DEFAULT '',
     join_date TEXT DEFAULT '',
     update_time TEXT DEFAULT ''
   )
@@ -98,6 +127,7 @@ export class DatabaseService {
       await this.store.executeSql(SQL_CREATE_GROWTH_RECORD)
       await this.store.executeSql(SQL_CREATE_HEALTH_REMINDER)
       await this.store.executeSql(SQL_CREATE_USER_INFO)
+      await this.store.executeSql(SQL_CREATE_FEED_POST)
       console.info('[DatabaseService] 数据库初始化成功')
     } catch (err) {
       console.error('[DatabaseService] 数据库初始化失败:', JSON.stringify(err))
@@ -111,6 +141,7 @@ export class DatabaseService {
     try {
       const valueBucket: relationalStore.ValuesBucket = {
         id: pet.id,
+        user_id: pet.userId,
         name: pet.name,
         species: pet.species,
         breed: pet.breed,
@@ -190,6 +221,7 @@ export class DatabaseService {
       while (resultSet.goToNextRow()) {
         const pet = new PetInfo()
         pet.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        pet.userId = resultSet.getString(resultSet.getColumnIndex('user_id'))
         pet.name = resultSet.getString(resultSet.getColumnIndex('name'))
         pet.species = resultSet.getString(resultSet.getColumnIndex('species'))
         pet.breed = resultSet.getString(resultSet.getColumnIndex('breed'))
@@ -221,6 +253,7 @@ export class DatabaseService {
       if (resultSet.goToFirstRow()) {
         const pet = new PetInfo()
         pet.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        pet.userId = resultSet.getString(resultSet.getColumnIndex('user_id'))
         pet.name = resultSet.getString(resultSet.getColumnIndex('name'))
         pet.species = resultSet.getString(resultSet.getColumnIndex('species'))
         pet.breed = resultSet.getString(resultSet.getColumnIndex('breed'))
@@ -443,6 +476,7 @@ export class DatabaseService {
         bio: user.bio,
         phone: user.phone,
         email: user.email,
+        topics: user.topics,
         join_date: user.joinDate,
         update_time: user.updateTime
       }
@@ -491,6 +525,7 @@ export class DatabaseService {
         user.bio = resultSet.getString(resultSet.getColumnIndex('bio'))
         user.phone = resultSet.getString(resultSet.getColumnIndex('phone'))
         user.email = resultSet.getString(resultSet.getColumnIndex('email'))
+        user.topics = resultSet.getString(resultSet.getColumnIndex('topics'))
         user.joinDate = resultSet.getString(resultSet.getColumnIndex('join_date'))
         user.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
         resultSet.close()
@@ -505,6 +540,123 @@ export class DatabaseService {
   }
 
   /** 根据用户名查询用户（登录用） */
+  /** 根据用户ID查询宠物 */
+  async queryPetsByUserId(userId: string): Promise<PetInfo[]> {
+    if (!this.store) return []
+    try {
+      const predicates = new relationalStore.RdbPredicates('pet_info')
+      predicates.equalTo('user_id', userId)
+      predicates.orderByDesc('update_time')
+      const resultSet = await this.store.query(predicates)
+      const pets: PetInfo[] = []
+      while (resultSet.goToNextRow()) {
+        const pet = new PetInfo()
+        pet.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        pet.userId = resultSet.getString(resultSet.getColumnIndex('user_id'))
+        pet.name = resultSet.getString(resultSet.getColumnIndex('name'))
+        pet.species = resultSet.getString(resultSet.getColumnIndex('species'))
+        pet.breed = resultSet.getString(resultSet.getColumnIndex('breed'))
+        pet.birthDate = resultSet.getString(resultSet.getColumnIndex('birth_date'))
+        pet.gender = resultSet.getString(resultSet.getColumnIndex('gender'))
+        pet.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
+        pet.weight = resultSet.getDouble(resultSet.getColumnIndex('weight'))
+        pet.height = resultSet.getDouble(resultSet.getColumnIndex('height'))
+        pet.color = resultSet.getString(resultSet.getColumnIndex('color'))
+        pet.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        pet.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        pet.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
+        pets.push(pet)
+      }
+      resultSet.close()
+      return pets
+    } catch (err) {
+      console.error('[DatabaseService] queryPetsByUserId failed:', JSON.stringify(err))
+      return []
+    }
+  }
+
+  // ==================== 社区动态 CRUD ====================
+
+  async insertFeedPost(post: FeedPostData): Promise<boolean> {
+    if (!this.store) return false
+    try {
+      const valueBucket: relationalStore.ValuesBucket = {
+        user_id: post.userId,
+        topic_id: post.topicId,
+        content: post.content,
+        author: post.author,
+        avatar: post.avatar,
+        likes: 0,
+        comments: 0,
+        create_time: post.createTime
+      }
+      await this.store.insert('feed_post', valueBucket)
+      return true
+    } catch (err) {
+      console.error('[DatabaseService] insertFeedPost failed:', JSON.stringify(err))
+      return false
+    }
+  }
+
+  async queryAllFeedPosts(): Promise<FeedPostData[]> {
+    if (!this.store) return []
+    try {
+      const predicates = new relationalStore.RdbPredicates('feed_post')
+      predicates.orderByDesc('likes')
+      const resultSet = await this.store.query(predicates)
+      const posts: FeedPostData[] = []
+      while (resultSet.goToNextRow()) {
+        const post: FeedPostData = {
+          id: resultSet.getLong(resultSet.getColumnIndex('id')),
+          userId: resultSet.getString(resultSet.getColumnIndex('user_id')),
+          topicId: resultSet.getString(resultSet.getColumnIndex('topic_id')),
+          content: resultSet.getString(resultSet.getColumnIndex('content')),
+          author: resultSet.getString(resultSet.getColumnIndex('author')),
+          avatar: resultSet.getString(resultSet.getColumnIndex('avatar')),
+          likes: resultSet.getLong(resultSet.getColumnIndex('likes')),
+          comments: resultSet.getLong(resultSet.getColumnIndex('comments')),
+          createTime: resultSet.getString(resultSet.getColumnIndex('create_time'))
+        }
+        posts.push(post)
+      }
+      resultSet.close()
+      return posts
+    } catch (err) {
+      console.error('[DatabaseService] queryAllFeedPosts failed:', JSON.stringify(err))
+      return []
+    }
+  }
+
+  async queryFeedPostsByUser(userId: string): Promise<FeedPostData[]> {
+    if (!this.store) return []
+    try {
+      const predicates = new relationalStore.RdbPredicates('feed_post')
+      predicates.equalTo('user_id', userId)
+      predicates.orderByDesc('create_time')
+      const resultSet = await this.store.query(predicates)
+      const posts: FeedPostData[] = []
+      while (resultSet.goToNextRow()) {
+        const post: FeedPostData = {
+          id: resultSet.getLong(resultSet.getColumnIndex('id')),
+          userId: resultSet.getString(resultSet.getColumnIndex('user_id')),
+          topicId: resultSet.getString(resultSet.getColumnIndex('topic_id')),
+          content: resultSet.getString(resultSet.getColumnIndex('content')),
+          author: resultSet.getString(resultSet.getColumnIndex('author')),
+          avatar: resultSet.getString(resultSet.getColumnIndex('avatar')),
+          likes: resultSet.getLong(resultSet.getColumnIndex('likes')),
+          comments: resultSet.getLong(resultSet.getColumnIndex('comments')),
+          createTime: resultSet.getString(resultSet.getColumnIndex('create_time'))
+        }
+        posts.push(post)
+      }
+      resultSet.close()
+      return posts
+    } catch (err) {
+      console.error('[DatabaseService] queryFeedPostsByUser failed:', JSON.stringify(err))
+      return []
+    }
+  }
+
   async queryUserByUsername(username: string): Promise<UserInfo | null> {
     if (!this.store) return null
     try {
@@ -520,6 +672,7 @@ export class DatabaseService {
         user.bio = resultSet.getString(resultSet.getColumnIndex('bio'))
         user.phone = resultSet.getString(resultSet.getColumnIndex('phone'))
         user.email = resultSet.getString(resultSet.getColumnIndex('email'))
+        user.topics = resultSet.getString(resultSet.getColumnIndex('topics'))
         user.joinDate = resultSet.getString(resultSet.getColumnIndex('join_date'))
         user.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
         resultSet.close()

@@ -2,6 +2,7 @@
   "src": [
     "pages/Index",
     "pages/LoginPage",
+    "pages/TopicFeedPage",
     "pages/MyPage",
     "pages/PetProfilePage",
     "pages/GrowthRecordPage",

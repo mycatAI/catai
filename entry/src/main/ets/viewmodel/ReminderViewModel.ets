@@ -201,4 +201,11 @@ export class ReminderViewModel {
   getTypeIcon(type: string): string {
     return REMINDER_TYPE_ICONS[type] || '📌'
   }
+
+  /**
+   * 请求通知权限
+   */
+  async requestNotificationPermission(): Promise<boolean> {
+    return await this.notificationService.requestNotificationPermission()
+  }
 }

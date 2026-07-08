@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "宠物成长日记"
+    },
+    {
+      "name": "reminder_permission_reason",
+      "value": "用于在设定的时间发送铃声通知，提醒您宠物的健康事项"
     }
   ]
 }

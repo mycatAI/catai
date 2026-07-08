@@ -2,6 +2,7 @@ import { PetInfo, SPECIES_OPTIONS, GENDER_OPTIONS } from '../model/PetInfo'
 import { PetViewModel } from '../viewmodel/PetViewModel'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
 /**
  * 宠物档案页面
@@ -21,6 +22,7 @@ struct PetProfilePage {
   @State formBirthDate: string = ''
   @State formColor: string = ''
   @State formNotes: string = ''
+  @State formAvatar: string = ''
 
   aboutToAppear(): void {
     this.viewModel.loadPets()
@@ -35,6 +37,7 @@ struct PetProfilePage {
     this.formBirthDate = DateUtil.today()
     this.formColor = ''
     this.formNotes = ''
+    this.formAvatar = ''
   }
 
   openEditDialogLocal(pet: PetInfo): void {
@@ -46,6 +49,7 @@ struct PetProfilePage {
     this.formBirthDate = pet.birthDate
     this.formColor = pet.color
     this.formNotes = pet.notes
+    this.formAvatar = pet.avatar
   }
 
   async savePetLocal(): Promise<void> {
@@ -58,8 +62,26 @@ struct PetProfilePage {
     pet.birthDate = this.formBirthDate
     pet.color = this.formColor
     pet.notes = this.formNotes
+    pet.avatar = this.formAvatar
     pet.updateTime = DateUtil.today()
     await this.viewModel.savePet()
+  }
+
+  async selectAvatar(): Promise<void> {
+    try {
+      const context = getContext(this)
+      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context)
+      const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions()
+      photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+      photoSelectOptions.maxSelectNumber = 1
+      const photoPicker = new photoAccessHelper.PhotoViewPicker()
+      const result = await photoPicker.select(photoSelectOptions)
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.formAvatar = result.photoUris[0]
+      }
+    } catch (err) {
+      console.error('[PetProfile] 选择头像失败:', JSON.stringify(err))
+    }
   }
 
   build() {
@@ -135,13 +157,21 @@ struct PetProfilePage {
     Row() {
       // 头像
       Column() {
-        Text(pet.species === '狗狗' ? '🐶' : pet.species === '猫咪' ? '🐱' : '🐾')
-          .fontSize(36)
-          .width(56)
-          .height(56)
-          .borderRadius(28)
-          .backgroundColor('#FFF3E0')
-          .textAlign(TextAlign.Center)
+        if (pet.avatar) {
+          Image(pet.avatar)
+            .width(56)
+            .height(56)
+            .borderRadius(28)
+            .objectFit(ImageFit.Cover)
+        } else {
+          Text(pet.species === '狗狗' ? '🐶' : pet.species === '猫咪' ? '🐱' : '🐾')
+            .fontSize(36)
+            .width(56)
+            .height(56)
+            .borderRadius(28)
+            .backgroundColor('#FFF3E0')
+            .textAlign(TextAlign.Center)
+        }
       }
 
       // 信息
@@ -260,6 +290,41 @@ struct PetProfilePage {
           }
           .width('100%')
           .margin({ bottom: 12 })
+
+          // 头像
+          Column() {
+            Text('头像')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            Row() {
+              if (this.formAvatar) {
+                Image(this.formAvatar)
+                  .width(64)
+                  .height(64)
+                  .borderRadius(32)
+                  .objectFit(ImageFit.Cover)
+                Button('更换')
+                  .fontSize(12)
+                  .fontColor('#FF6F00')
+                  .backgroundColor('#FFF8E1')
+                  .borderRadius(12)
+                  .height(28)
+                  .margin({ left: 10 })
+                  .onClick(() => { this.selectAvatar() })
+              } else {
+                Button('选择照片')
+                  .fontSize(13)
+                  .fontColor('#FF6F00')
+                  .backgroundColor('#FFF8E1')
+                  .borderRadius(8)
+                  .padding({ left: 12, right: 12 })
+                  .height(36)
+                  .onClick(() => { this.selectAvatar() })
+              }
+            }
+          }
 
           // 物种
           Column() {

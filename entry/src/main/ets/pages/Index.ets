@@ -10,6 +10,7 @@ import { ReminderCard } from '../components/ReminderCard'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 import { DatabaseService } from '../service/DatabaseService'
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
 @Entry
 @Component
@@ -26,9 +27,15 @@ struct Index {
   @State editPetBirthDate: string = ''
   @State editPetColor: string = ''
   @State editPetNotes: string = ''
+  @State editPetAvatar: string = ''
 
   aboutToAppear(): void {
     this.initData()
+  }
+
+  // 页面每次显示时刷新数据（从其他页面返回时头像等信息的更新能反映出来）
+  onPageShow(): void {
+    this.refreshPetData()
   }
 
   async initData(): Promise<void> {
@@ -38,6 +45,15 @@ struct Index {
     await db.init(context)
 
     // 加载数据
+    await this.petVM.loadPets()
+    if (this.petVM.selectedPetId) {
+      await this.growthVM.loadRecords(this.petVM.selectedPetId)
+      await this.reminderVM.loadReminders(this.petVM.selectedPetId)
+    }
+  }
+
+  async refreshPetData(): Promise<void> {
+    // 重新从数据库加载宠物数据，确保头像等信息是最新的
     await this.petVM.loadPets()
     if (this.petVM.selectedPetId) {
       await this.growthVM.loadRecords(this.petVM.selectedPetId)
@@ -72,8 +88,26 @@ struct Index {
     pet.birthDate = this.editPetBirthDate
     pet.color = this.editPetColor
     pet.notes = this.editPetNotes
+    pet.avatar = this.editPetAvatar
     pet.updateTime = DateUtil.today()
     await this.petVM.savePet()
+  }
+
+  async selectPetAvatar(): Promise<void> {
+    try {
+      const context = getContext(this)
+      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context)
+      const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions()
+      photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+      photoSelectOptions.maxSelectNumber = 1
+      const photoPicker = new photoAccessHelper.PhotoViewPicker()
+      const result = await photoPicker.select(photoSelectOptions)
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.editPetAvatar = result.photoUris[0]
+      }
+    } catch (err) {
+      console.error('[Index] 选择头像失败:', JSON.stringify(err))
+    }
   }
 
   build() {
@@ -174,14 +208,22 @@ struct Index {
         Row() {
           // 头像
           Column() {
-            Text(this.petVM.getCurrentPet()!.species === '狗狗' ? '🐶' :
-              this.petVM.getCurrentPet()!.species === '猫咪' ? '🐱' : '🐾')
-              .fontSize(40)
-              .width(64)
-              .height(64)
-              .borderRadius(32)
-              .backgroundColor('#FFF3E0')
-              .textAlign(TextAlign.Center)
+            if (this.petVM.getCurrentPet()!.avatar) {
+              Image(this.petVM.getCurrentPet()!.avatar)
+                .width(64)
+                .height(64)
+                .borderRadius(32)
+                .objectFit(ImageFit.Cover)
+            } else {
+              Text(this.petVM.getCurrentPet()!.species === '狗狗' ? '🐶' :
+                this.petVM.getCurrentPet()!.species === '猫咪' ? '🐱' : '🐾')
+                .fontSize(40)
+                .width(64)
+                .height(64)
+                .borderRadius(32)
+                .backgroundColor('#FFF3E0')
+                .textAlign(TextAlign.Center)
+            }
           }
 
           Column() {
@@ -493,6 +535,41 @@ struct Index {
           }
           .width('100%')
           .margin({ bottom: 12 })
+
+          // 头像
+          Column() {
+            Text('头像')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            Row() {
+              if (this.editPetAvatar) {
+                Image(this.editPetAvatar)
+                  .width(64)
+                  .height(64)
+                  .borderRadius(32)
+                  .objectFit(ImageFit.Cover)
+                Button('更换')
+                  .fontSize(12)
+                  .fontColor('#FF6F00')
+                  .backgroundColor('#FFF8E1')
+                  .borderRadius(12)
+                  .height(28)
+                  .margin({ left: 10 })
+                  .onClick(() => { this.selectPetAvatar() })
+              } else {
+                Button('选择照片')
+                  .fontSize(13)
+                  .fontColor('#FF6F00')
+                  .backgroundColor('#FFF8E1')
+                  .borderRadius(8)
+                  .padding({ left: 12, right: 12 })
+                  .height(36)
+                  .onClick(() => { this.selectPetAvatar() })
+              }
+            }
+          }
 
           // 物种
           Column() {

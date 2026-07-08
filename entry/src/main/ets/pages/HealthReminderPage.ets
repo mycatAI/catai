@@ -189,8 +189,48 @@ struct HealthReminderPage {
     reminder.notes = this.editNotes
     reminder.createTime = isNew ? DateUtil.today() : this.reminderVM.editingReminder.createTime
     this.reminderVM.editingReminder = reminder
+
+    // 请求通知权限（首次保存提醒时）
+    await this.reminderVM.requestNotificationPermission()
+
     await this.reminderVM.saveReminder()
     this.showAddDialog = false
+  }
+
+  // 打开系统日期选择器
+  private showDatePicker(): void {
+    const parts = this.editDate.split('-').map(Number)
+    const selectedDate = new Date(parts[0] || 2025, (parts[1] || 1) - 1, parts[2] || 1)
+
+    DatePickerDialog.show({
+      start: new Date('2020-1-1'),
+      end: new Date('2100-12-31'),
+      selected: selectedDate,
+      lunar: false,
+      onAccept: (value: DatePickerResult) => {
+        const y = value.year ?? selectedDate.getFullYear()
+        const m = (value.month ?? 0) + 1
+        const d = value.day ?? 1
+        this.editDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      }
+    })
+  }
+
+  // 打开系统时间选择器
+  private showTimePicker(): void {
+    const parts = this.editTime.split(':').map(Number)
+    const selectedDate = new Date()
+    selectedDate.setHours(parts[0] || 9, parts[1] || 0, 0, 0)
+
+    TimePickerDialog.show({
+      selected: selectedDate,
+      useMilitaryTime: true,
+      onAccept: (value: TimePickerResult) => {
+        const h = value.hour ?? 9
+        const m = value.minute ?? 0
+        this.editTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      }
+    })
   }
 
   @Builder
@@ -252,26 +292,50 @@ struct HealthReminderPage {
           .columnsGap(6)
           .margin({ bottom: 14 })
 
-          // 日期和时间
+          // 日期和时间（使用系统选择器）
           Row() {
             Column() {
               this.buildLabel('日期')
-              TextInput({ text: this.editDate, placeholder: 'YYYY-MM-DD' })
-                .fontSize(14)
-                .backgroundColor('#FAFAFA')
-                .borderRadius(8)
-                .onChange((v: string) => { this.editDate = v })
+              Button() {
+                Row() {
+                  Text('📅')
+                    .fontSize(14)
+                    .margin({ right: 6 })
+                  Text(this.editDate)
+                    .fontSize(14)
+                    .fontColor('#424242')
+                }
+                .width('100%')
+                .justifyContent(FlexAlign.Start)
+              }
+              .width('100%')
+              .height(40)
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onClick(() => { this.showDatePicker() })
             }
             .layoutWeight(1)
 
             Column() {
               this.buildLabel('时间')
-              TextInput({ text: this.editTime, placeholder: 'HH:mm' })
-                .fontSize(14)
-                .backgroundColor('#FAFAFA')
-                .borderRadius(8)
-                .margin({ left: 8 })
-                .onChange((v: string) => { this.editTime = v })
+              Button() {
+                Row() {
+                  Text('⏰')
+                    .fontSize(14)
+                    .margin({ right: 6 })
+                  Text(this.editTime)
+                    .fontSize(14)
+                    .fontColor('#424242')
+                }
+                .width('100%')
+                .justifyContent(FlexAlign.Start)
+              }
+              .width('100%')
+              .height(40)
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .margin({ left: 8 })
+              .onClick(() => { this.showTimePicker() })
             }
             .layoutWeight(1)
             .margin({ left: 8 })

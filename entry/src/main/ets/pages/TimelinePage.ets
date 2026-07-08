@@ -1,6 +1,6 @@
 import { GrowthRecord } from '../model/GrowthRecord'
 import { GrowthRecordViewModel } from '../viewmodel/GrowthRecordViewModel'
-import { TimelineItem } from '../components/TimelineItem'
+import { GROWTH_TYPE_LABELS, GROWTH_TYPE_ICONS } from '../model/GrowthRecord'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 
@@ -34,7 +34,7 @@ struct TimelinePage {
     const map = new Map<string, GrowthRecord[]>()
     for (const record of this.growthVM.records) {
       if (record.photo) {
-        const key = record.date.substring(0, 7) // YYYY-MM
+        const key = record.date.substring(0, 7)
         const list = map.get(key) || []
         list.push(record)
         map.set(key, list)
@@ -64,7 +64,7 @@ struct TimelinePage {
 
         Blank()
 
-        Text(`共${this.growthVM.getPhotoRecords().length}张`)
+        Text(this.growthVM.getPhotoRecords().length + '张')
           .fontSize(13)
           .fontColor('#9E9E9E')
       }
@@ -92,79 +92,82 @@ struct TimelinePage {
         .height('100%')
         .justifyContent(FlexAlign.Center)
       } else {
-        // 时间轴列表
-        List() {
-          ForEach(Array.from(this.groupedRecords.entries()).sort((a, b) => b[0].localeCompare(a[0])),
-          (entry: [string, GrowthRecord[]], monthIndex: number) => {
-            ListItem() {
+        Scroll() {
+          Column() {
+            ForEach(Array.from(this.groupedRecords.entries()).sort((a, b) => b[0].localeCompare(a[0])),
+            (entry: [string, GrowthRecord[]], monthIndex: number) => {
               Column() {
                 // 月份标题
                 Row() {
-                  Text(this.formatMonth(entry[0]))
-                    .fontSize(16)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor('#FF6F00')
-                    .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-                    .backgroundColor('#FFF8E1')
-                    .borderRadius(16)
+                  Column() {
+                    Text(this.formatMonth(entry[0]))
+                      .fontSize(16)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor('#212121')
+                  }
 
                   Blank()
 
-                  Text(`${entry[1].length}条记录`)
-                    .fontSize(12)
-                    .fontColor('#9E9E9E')
+                  Column() {
+                    Text(entry[1].length + '张')
+                      .fontSize(12)
+                      .fontColor('#FF6F00')
+                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                      .backgroundColor('#FFF8E1')
+                      .borderRadius(10)
+                  }
                 }
                 .width('100%')
                 .margin({ bottom: 12 })
 
-                // 该月的照片网格
+                // 照片网格 - 3列
                 Grid() {
-                  ForEach(entry[1], (record: GrowthRecord, index: number) => {
+                  ForEach(entry[1].sort((a, b) => DateUtil.compareDate(b.date, a.date)),
+                  (record: GrowthRecord, idx: number) => {
                     GridItem() {
-                      Stack() {
+                      Column() {
+                        // 照片
                         Image(record.photo)
                           .width('100%')
-                          .height('100%')
+                          .aspectRatio(1)
                           .objectFit(ImageFit.Cover)
                           .borderRadius(8)
 
-                        // 日期角标
-                        Text(record.date.substring(8)) // DD
-                          .fontSize(11)
-                          .fontColor('#FFFFFF')
-                          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                          .backgroundColor('#00000060')
-                          .borderRadius(8)
-                          .position({ x: 6, y: 6 })
+                        // 底部信息栏
+                        Row() {
+                          Text(GROWTH_TYPE_ICONS[record.type] || '📌')
+                            .fontSize(12)
+                          Text(record.date.substring(5))
+                            .fontSize(11)
+                            .fontColor('#757575')
+                            .margin({ left: 4 })
+                          if (record.notes) {
+                            Text(record.notes)
+                              .fontSize(10)
+                              .fontColor('#BDBDBD')
+                              .maxLines(1)
+                              .textOverflow({ overflow: TextOverflow.Ellipsis })
+                              .layoutWeight(1)
+                              .margin({ left: 4 })
+                          }
+                        }
+                        .width('100%')
+                        .margin({ top: 4 })
                       }
                     }
                   })
                 }
                 .columnsTemplate('1fr 1fr 1fr')
-                .rowsGap(4)
-                .columnsGap(4)
-
-                // 该月的记录列表
-                Column() {
-                  ForEach(entry[1].sort((a, b) => DateUtil.compareDate(b.date, a.date)),
-                  (record: GrowthRecord, idx: number) => {
-                    TimelineItem({
-                      record: record,
-                      isFirst: idx === 0,
-                      isLast: idx === entry[1].length - 1
-                    })
-                  })
-                }
-                .width('100%')
-                .margin({ top: 8 })
+                .rowsGap(8)
+                .columnsGap(8)
               }
               .width('100%')
-            }
-            .margin({ bottom: 24 })
-          })
+              .margin({ bottom: 28 })
+            })
+          }
+          .padding({ left: 16, right: 16, top: 12, bottom: 32 })
         }
         .layoutWeight(1)
-        .padding({ left: 16, right: 16, top: 12 })
         .scrollBar(BarState.Off)
       }
     }
@@ -176,6 +179,6 @@ struct TimelinePage {
   private formatMonth(ymStr: string): string {
     const parts = ymStr.split('-')
     if (parts.length !== 2) return ymStr
-    return `${parts[0]}年${parseInt(parts[1])}月`
+    return parts[0] + '年' + parseInt(parts[1]) + '月'
   }
 }

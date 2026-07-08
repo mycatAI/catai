@@ -54,14 +54,14 @@ export class PetViewModel {
    * 打开添加宠物弹窗
    */
   openAddPetDialog(): void {
-    this.editingPet = new PetInfo({
-      id: DateUtil.generateId(),
-      species: SPECIES_OPTIONS[0],
-      gender: GENDER_OPTIONS[0],
-      birthDate: DateUtil.today(),
-      createTime: DateUtil.today(),
-      updateTime: DateUtil.today()
-    })
+    const pet = new PetInfo()
+    pet.id = DateUtil.generateId()
+    pet.species = SPECIES_OPTIONS[0]
+    pet.gender = GENDER_OPTIONS[0]
+    pet.birthDate = DateUtil.today()
+    pet.createTime = DateUtil.today()
+    pet.updateTime = DateUtil.today()
+    this.editingPet = pet
     this.showEditDialog = true
   }
 
@@ -69,7 +69,21 @@ export class PetViewModel {
    * 打开编辑宠物弹窗
    */
   openEditPetDialog(pet: PetInfo): void {
-    this.editingPet = new PetInfo({ ...pet })
+    const newPet = new PetInfo()
+    newPet.id = pet.id
+    newPet.name = pet.name
+    newPet.species = pet.species
+    newPet.breed = pet.breed
+    newPet.birthDate = pet.birthDate
+    newPet.gender = pet.gender
+    newPet.avatar = pet.avatar
+    newPet.weight = pet.weight
+    newPet.height = pet.height
+    newPet.color = pet.color
+    newPet.notes = pet.notes
+    newPet.createTime = pet.createTime
+    newPet.updateTime = pet.updateTime
+    this.editingPet = newPet
     this.showEditDialog = true
   }
 

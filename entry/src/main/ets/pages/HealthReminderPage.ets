@@ -1,5 +1,5 @@
-import { HealthReminder, ReminderType } from '../model/HealthReminder'
-import { ReminderViewModel } from '../viewmodel/ReminderViewModel'
+import { HealthReminder, ReminderType, RepeatCycle } from '../model/HealthReminder'
+import { ReminderViewModel, TypeOption, CycleOption } from '../viewmodel/ReminderViewModel'
 import { ReminderCard } from '../components/ReminderCard'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
@@ -177,18 +177,18 @@ struct HealthReminderPage {
 
   private async saveReminder(): Promise<void> {
     const isNew = !this.reminderVM.editingReminder.id
-    this.reminderVM.editingReminder = new HealthReminder({
-      id: this.reminderVM.editingReminder.id || DateUtil.generateId(),
-      petId: this.petId,
-      title: this.editTitle,
-      type: this.editType as ReminderType,
-      date: this.editDate,
-      time: this.editTime,
-      repeatCycle: this.editCycle,
-      enabled: this.editEnabled,
-      notes: this.editNotes,
-      createTime: isNew ? DateUtil.today() : this.reminderVM.editingReminder.createTime
-    })
+    const reminder = new HealthReminder()
+    reminder.id = this.reminderVM.editingReminder.id || DateUtil.generateId()
+    reminder.petId = this.petId
+    reminder.title = this.editTitle
+    reminder.type = this.editType as ReminderType
+    reminder.date = this.editDate
+    reminder.time = this.editTime
+    reminder.repeatCycle = this.editCycle as RepeatCycle
+    reminder.enabled = this.editEnabled
+    reminder.notes = this.editNotes
+    reminder.createTime = isNew ? DateUtil.today() : this.reminderVM.editingReminder.createTime
+    this.reminderVM.editingReminder = reminder
     await this.reminderVM.saveReminder()
     this.showAddDialog = false
   }
@@ -229,7 +229,7 @@ struct HealthReminderPage {
           // 提醒类型
           this.buildLabel('提醒类型')
           Grid() {
-            ForEach(this.reminderVM.getTypeOptions(), (opt) => {
+            ForEach(this.reminderVM.getTypeOptions(), (opt: TypeOption) => {
               GridItem() {
                 Column() {
                   Text(opt.icon)
@@ -283,7 +283,7 @@ struct HealthReminderPage {
           this.buildLabel('重复周期')
           Scroll() {
             Row() {
-              ForEach(this.reminderVM.getRepeatCycleOptions(), (opt) => {
+              ForEach(this.reminderVM.getRepeatCycleOptions(), (opt: CycleOption) => {
                 Text(opt.label)
                   .fontSize(12)
                   .fontColor(this.editCycle === opt.key ? '#FF6F00' : '#757575')
@@ -338,7 +338,7 @@ struct HealthReminderPage {
       .padding({ left: 20, right: 20, bottom: 20 })
     }
     .width('92%')
-    .maxHeight('85%')
+    .height('85%')
     .backgroundColor('#FFFFFF')
     .borderRadius(16)
     .position({ x: '4%', y: '8%' })

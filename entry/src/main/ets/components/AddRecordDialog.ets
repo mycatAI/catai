@@ -13,8 +13,8 @@ export struct AddRecordDialog {
   onCancel?: () => void
 
   @State private recordType: string = GrowthRecordType.DAILY
-  @State private weight: string = ''
-  @State private height: string = ''
+  @State private recordWeight: string = ''
+  @State private recordHeight: string = ''
   @State private photo: string = ''
   @State private notes: string = ''
   @State private recordDate: string = DateUtil.today()
@@ -64,12 +64,12 @@ export struct AddRecordDialog {
             this.buildTypeSelector()
 
             // 体重输入
-            this.buildInputRow('⚖️ 体重 (kg)', '请输入体重', this.weight,
-              (value: string) => { this.weight = value })
+            this.buildInputRow('⚖️ 体重 (kg)', '请输入体重', this.recordWeight,
+              (value: string) => { this.recordWeight = value })
 
             // 身高输入
-            this.buildInputRow('📏 身高 (cm)', '请输入身高', this.height,
-              (value: string) => { this.height = value })
+            this.buildInputRow('📏 身高 (cm)', '请输入身高', this.recordHeight,
+              (value: string) => { this.recordHeight = value })
 
             // 照片
             this.buildPhotoRow()
@@ -96,15 +96,14 @@ export struct AddRecordDialog {
           .borderRadius(22)
           .margin(16)
           .onClick(() => {
-            const record = new GrowthRecord({
-              petId: this.petId,
-              type: this.recordType as GrowthRecordType,
-              weight: parseFloat(this.weight) || 0,
-              height: parseFloat(this.height) || 0,
-              photo: this.photo,
-              notes: this.notes,
-              date: this.recordDate
-            })
+            const record = new GrowthRecord()
+            record.petId = this.petId
+            record.type = this.recordType as GrowthRecordType
+            record.weight = parseFloat(this.recordWeight) || 0
+            record.height = parseFloat(this.recordHeight) || 0
+            record.photo = this.photo
+            record.notes = this.notes
+            record.date = this.recordDate
             if (this.onConfirm) {
               this.onConfirm(record)
               this.resetForm()
@@ -112,7 +111,7 @@ export struct AddRecordDialog {
           })
       }
       .width('92%')
-      .maxHeight('80%')
+      .height('80%')
       .backgroundColor('#FFFFFF')
       .borderRadius(16)
       .position({ x: '4%', y: '10%' })
@@ -267,8 +266,8 @@ export struct AddRecordDialog {
 
   private resetForm(): void {
     this.recordType = GrowthRecordType.DAILY
-    this.weight = ''
-    this.height = ''
+    this.recordWeight = ''
+    this.recordHeight = ''
     this.photo = ''
     this.notes = ''
     this.recordDate = DateUtil.today()

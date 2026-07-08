@@ -4,7 +4,7 @@ import { PetViewModel } from '../viewmodel/PetViewModel'
 import { GrowthChart } from '../components/GrowthChart'
 import { AddRecordDialog } from '../components/AddRecordDialog'
 import { DateUtil } from '../common/Utils'
-import { router, IDataSource, DataChangeListener } from '@kit.ArkUI'
+import { router } from '@kit.ArkUI'
 
 /**
  * 成长记录页面
@@ -175,7 +175,7 @@ struct GrowthRecordPage {
     } else {
       // 使用 LazyForEach 优化长列表渲染
       List() {
-        LazyForEach(new RecordDataSource(this.growthVM.records), (record: GrowthRecord, index: number) => {
+        ForEach(this.growthVM.records, (record: GrowthRecord, index: number) => {
           ListItem() {
             this.buildRecordItem(record)
           }
@@ -392,39 +392,6 @@ struct GrowthRecordPage {
         if (record.height > 0) pet.height = record.height
         await this.petVM.savePet()
       }
-    }
-  }
-}
-
-/**
- * 数据源适配器，用于 LazyForEach
- */
-class RecordDataSource implements IDataSource {
-  private records: GrowthRecord[]
-  private listeners: DataChangeListener[] = []
-
-  constructor(records: GrowthRecord[]) {
-    this.records = records
-  }
-
-  totalCount(): number {
-    return this.records.length
-  }
-
-  getData(index: number): GrowthRecord {
-    return this.records[index]
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener)
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener)
-    if (pos >= 0) {
-      this.listeners.splice(pos, 1)
     }
   }
 }

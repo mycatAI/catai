@@ -39,8 +39,6 @@ export class NotificationService {
 
       // 如果有重复周期，设置循环提醒
       if (reminder.repeatCycle !== 'none') {
-        request.slotType = notificationManager.SlotType.SOCIAL_COMMUNICATION
-        // 设置通知的重复间隔
         request.notificationSlotType = notificationManager.SlotType.SOCIAL_COMMUNICATION
       }
 
@@ -82,8 +80,8 @@ export class NotificationService {
    */
   async requestPermission(): Promise<boolean> {
     try {
-      const result = await notificationManager.requestEnableNotification()
-      return result
+      await notificationManager.requestEnableNotification()
+      return true
     } catch (err) {
       console.error('[NotificationService] 请求通知权限失败:', JSON.stringify(err))
       return false

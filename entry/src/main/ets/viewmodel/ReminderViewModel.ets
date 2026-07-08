@@ -3,6 +3,19 @@ import { DatabaseService } from '../service/DatabaseService'
 import { NotificationService } from '../service/NotificationService'
 import { DateUtil } from '../common/Utils'
 
+/** 类型选项 */
+export interface TypeOption {
+  key: string
+  label: string
+  icon: string
+}
+
+/** 重复周期选项 */
+export interface CycleOption {
+  key: string
+  label: string
+}
+
 /**
  * 健康提醒 ViewModel
  */
@@ -56,18 +69,18 @@ export class ReminderViewModel {
    * 打开添加提醒弹窗
    */
   openAddReminderDialog(): void {
-    this.editingReminder = new HealthReminder({
-      id: DateUtil.generateId(),
-      petId: this.petId,
-      type: ReminderType.CUSTOM,
-      title: '',
-      date: DateUtil.today(),
-      time: '09:00',
-      repeatCycle: RepeatCycle.NONE,
-      enabled: true,
-      notes: '',
-      createTime: DateUtil.today()
-    })
+    const reminder = new HealthReminder()
+    reminder.id = DateUtil.generateId()
+    reminder.petId = this.petId
+    reminder.type = ReminderType.CUSTOM
+    reminder.title = ''
+    reminder.date = DateUtil.today()
+    reminder.time = '09:00'
+    reminder.repeatCycle = RepeatCycle.NONE
+    reminder.enabled = true
+    reminder.notes = ''
+    reminder.createTime = DateUtil.today()
+    this.editingReminder = reminder
     this.showEditDialog = true
   }
 
@@ -75,7 +88,18 @@ export class ReminderViewModel {
    * 打开编辑提醒弹窗
    */
   openEditReminderDialog(reminder: HealthReminder): void {
-    this.editingReminder = new HealthReminder({ ...reminder })
+    const newReminder = new HealthReminder()
+    newReminder.id = reminder.id
+    newReminder.petId = reminder.petId
+    newReminder.type = reminder.type
+    newReminder.title = reminder.title
+    newReminder.date = reminder.date
+    newReminder.time = reminder.time
+    newReminder.repeatCycle = reminder.repeatCycle
+    newReminder.enabled = reminder.enabled
+    newReminder.notes = reminder.notes
+    newReminder.createTime = reminder.createTime
+    this.editingReminder = newReminder
     this.showEditDialog = true
   }
 
@@ -139,22 +163,29 @@ export class ReminderViewModel {
   /**
    * 获取提醒类型选项
    */
-  getTypeOptions(): { key: string; label: string; icon: string }[] {
-    return Object.keys(REMINDER_TYPE_LABELS).map(key => ({
-      key,
-      label: REMINDER_TYPE_LABELS[key],
-      icon: REMINDER_TYPE_ICONS[key] || '📌'
-    }))
+  getTypeOptions(): TypeOption[] {
+    const result: TypeOption[] = []
+    const keys = Object.keys(REMINDER_TYPE_LABELS)
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i]
+      const opt: TypeOption = { key: k, label: REMINDER_TYPE_LABELS[k], icon: REMINDER_TYPE_ICONS[k] || '📌' }
+      result.push(opt)
+    }
+    return result
   }
 
   /**
    * 获取重复周期选项
    */
-  getRepeatCycleOptions(): { key: string; label: string }[] {
-    return Object.keys(REPEAT_CYCLE_LABELS).map(key => ({
-      key,
-      label: REPEAT_CYCLE_LABELS[key]
-    }))
+  getRepeatCycleOptions(): CycleOption[] {
+    const result: CycleOption[] = []
+    const keys = Object.keys(REPEAT_CYCLE_LABELS)
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i]
+      const opt: CycleOption = { key: k, label: REPEAT_CYCLE_LABELS[k] }
+      result.push(opt)
+    }
+    return result
   }
 
   /**

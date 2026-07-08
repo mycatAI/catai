@@ -1,6 +1,9 @@
 import { PetViewModel } from '../viewmodel/PetViewModel'
 import { GrowthRecordViewModel } from '../viewmodel/GrowthRecordViewModel'
 import { ReminderViewModel } from '../viewmodel/ReminderViewModel'
+import { HealthReminder } from '../model/HealthReminder'
+import { GrowthRecord } from '../model/GrowthRecord'
+import { PetInfo, SPECIES_OPTIONS, GENDER_OPTIONS } from '../model/PetInfo'
 import { PetSelector } from '../components/PetSelector'
 import { PetCard } from '../components/PetCard'
 import { ReminderCard } from '../components/ReminderCard'
@@ -15,6 +18,14 @@ struct Index {
   @State growthVM: GrowthRecordViewModel = new GrowthRecordViewModel()
   @State reminderVM: ReminderViewModel = new ReminderViewModel()
   @State showPetList: boolean = false
+  // 添加宠物表单状态
+  @State editPetName: string = ''
+  @State editPetSpecies: string = SPECIES_OPTIONS[0]
+  @State editPetBreed: string = ''
+  @State editPetGender: string = GENDER_OPTIONS[0]
+  @State editPetBirthDate: string = ''
+  @State editPetColor: string = ''
+  @State editPetNotes: string = ''
 
   aboutToAppear(): void {
     this.initData()
@@ -40,6 +51,31 @@ struct Index {
     this.reminderVM.loadReminders(petId)
   }
 
+  openAddDialog(): void {
+    this.petVM.openAddPetDialog()
+    this.editPetName = ''
+    this.editPetSpecies = SPECIES_OPTIONS[0]
+    this.editPetBreed = ''
+    this.editPetGender = GENDER_OPTIONS[0]
+    this.editPetBirthDate = DateUtil.today()
+    this.editPetColor = ''
+    this.editPetNotes = ''
+  }
+
+  async saveNewPet(): Promise<void> {
+    if (!this.editPetName.trim()) return
+    const pet = this.petVM.editingPet
+    pet.name = this.editPetName
+    pet.species = this.editPetSpecies
+    pet.breed = this.editPetBreed
+    pet.gender = this.editPetGender
+    pet.birthDate = this.editPetBirthDate
+    pet.color = this.editPetColor
+    pet.notes = this.editPetNotes
+    pet.updateTime = DateUtil.today()
+    await this.petVM.savePet()
+  }
+
   build() {
     Column() {
       // 顶部导航栏
@@ -50,10 +86,15 @@ struct Index {
         pets: this.petVM.pets,
         selectedPetId: this.petVM.selectedPetId,
         onSelect: (petId: string) => { this.onPetSelected(petId) },
-        onAdd: () => { this.petVM.openAddPetDialog() }
+        onAdd: () => { this.openAddDialog() }
       })
 
       Divider().height(1).color('#F5F5F5')
+
+      // 添加/编辑宠物弹窗
+      if (this.petVM.showEditDialog) {
+        this.buildAddPetDialog()
+      }
 
       if (this.petVM.pets.length === 0) {
         // 空状态：没有宠物
@@ -129,12 +170,12 @@ struct Index {
   @Builder
   private buildCurrentPetSection(): void {
     if (this.petVM.selectedPetId) {
-      const pet = this.petVM.getCurrentPet()
-      if (pet) {
+      if (this.petVM.getCurrentPet()) {
         Row() {
           // 头像
           Column() {
-            Text(pet.species === '狗狗' ? '🐶' : pet.species === '猫咪' ? '🐱' : '🐾')
+            Text(this.petVM.getCurrentPet()!.species === '狗狗' ? '🐶' :
+              this.petVM.getCurrentPet()!.species === '猫咪' ? '🐱' : '🐾')
               .fontSize(40)
               .width(64)
               .height(64)
@@ -144,16 +185,17 @@ struct Index {
           }
 
           Column() {
-            Text(pet.name)
+            Text(this.petVM.getCurrentPet()!.name)
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
               .fontColor('#212121')
-            Text(`${pet.species}${pet.breed ? ' · ' + pet.breed : ''}`)
+            Text(this.petVM.getCurrentPet()!.species +
+              (this.petVM.getCurrentPet()!.breed ? ' · ' + this.petVM.getCurrentPet()!.breed : ''))
               .fontSize(13)
               .fontColor('#757575')
               .margin({ top: 2 })
-            if (pet.birthDate) {
-              Text(`🎂 ${DateUtil.calculateAge(pet.birthDate)}`)
+            if (this.petVM.getCurrentPet()!.birthDate) {
+              Text('🎂 ' + DateUtil.calculateAge(this.petVM.getCurrentPet()!.birthDate))
                 .fontSize(12)
                 .fontColor('#9E9E9E')
                 .margin({ top: 2 })
@@ -165,11 +207,11 @@ struct Index {
 
           // 最新数据
           Column() {
-            Text(`${this.growthVM.getLatestWeight()}kg`)
+            Text(this.growthVM.getLatestWeight() + 'kg')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor('#FF6F00')
-            Text(`${this.growthVM.getLatestHeight()}cm`)
+            Text(this.growthVM.getLatestHeight() + 'cm')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor('#FF6F00')
@@ -182,7 +224,8 @@ struct Index {
         .borderRadius(12)
         .shadow({ radius: 4, color: '#00000010', offsetX: 0, offsetY: 2 })
         .onClick(() => {
-          router.pushUrl({ url: 'pages/PetProfilePage', params: { petId: pet.id } })
+          router.pushUrl({ url: 'pages/PetProfilePage',
+            params: { petId: this.petVM.getCurrentPet()!.id } })
         })
       }
     }
@@ -247,7 +290,6 @@ struct Index {
 
   @Builder
   private buildTodayReminders(): void {
-    const todayReminders = this.reminderVM.getTodayReminders()
     Column() {
       Row() {
         Text('📋 今日待办')
@@ -255,7 +297,7 @@ struct Index {
           .fontWeight(FontWeight.Medium)
           .fontColor('#424242')
         Blank()
-        Text(`${todayReminders.length}项`)
+        Text(this.reminderVM.getTodayReminders().length + '项')
           .fontSize(12)
           .fontColor('#FF6F00')
           .padding({ left: 8, right: 8, top: 2, bottom: 2 })
@@ -265,7 +307,7 @@ struct Index {
       .width('100%')
       .margin({ top: 20, bottom: 12 })
 
-      if (todayReminders.length === 0) {
+      if (this.reminderVM.getTodayReminders().length === 0) {
         Row() {
           Text('✅')
             .fontSize(16)
@@ -280,7 +322,7 @@ struct Index {
         .borderRadius(8)
       } else {
         Column() {
-          ForEach(todayReminders.slice(0, 3), (reminder) => {
+          ForEach(this.reminderVM.getTodayReminders().slice(0, 3), (reminder: HealthReminder) => {
             ReminderCard({
               reminder: reminder,
               onToggle: () => { this.reminderVM.toggleReminder(reminder) },
@@ -330,7 +372,7 @@ struct Index {
         })
       } else {
         Column() {
-          ForEach(this.growthVM.records.slice(0, 5), (record) => {
+          ForEach(this.growthVM.records.slice(0, 5), (record: GrowthRecord) => {
             Row() {
               Text(this.growthVM.getTypeIcon(record.type))
                 .fontSize(18)
@@ -404,11 +446,196 @@ struct Index {
         .padding({ left: 32, right: 32 })
         .margin({ top: 20 })
         .onClick(() => {
-          this.petVM.openAddPetDialog()
+          this.openAddDialog()
         })
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  private buildAddPetDialog(): void {
+    Column() {
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#00000060')
+        .onClick(() => { this.petVM.closeEditDialog() })
+    }
+    .width('100%')
+    .height('100%')
+    .position({ x: 0, y: 0 })
+
+    Column() {
+      Text('添加宠物')
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .margin({ top: 20, bottom: 20 })
+
+      Scroll() {
+        Column() {
+          // 名称
+          Column() {
+            Text('名称')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            TextInput({ text: this.editPetName, placeholder: '请输入宠物名称' })
+              .fontSize(14)
+              .width('100%')
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onChange((v: string) => { this.editPetName = v })
+          }
+          .width('100%')
+          .margin({ bottom: 12 })
+
+          // 物种
+          Column() {
+            Text('物种')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            Row() {
+              ForEach(SPECIES_OPTIONS, (opt: string) => {
+                Text(opt)
+                  .fontSize(12)
+                  .fontColor(this.editPetSpecies === opt ? '#FF6F00' : '#757575')
+                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                  .backgroundColor(this.editPetSpecies === opt ? '#FFF8E1' : '#FAFAFA')
+                  .borderRadius(12)
+                  .margin({ right: 6 })
+                  .onClick(() => { this.editPetSpecies = opt })
+              })
+            }
+          }
+
+          // 品种
+          Column() {
+            Text('品种')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            TextInput({ text: this.editPetBreed, placeholder: '请输入品种' })
+              .fontSize(14)
+              .width('100%')
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onChange((v: string) => { this.editPetBreed = v })
+          }
+          .width('100%')
+          .margin({ bottom: 12 })
+
+          // 性别
+          Column() {
+            Text('性别')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            Row() {
+              ForEach(GENDER_OPTIONS, (opt: string) => {
+                Text(opt)
+                  .fontSize(12)
+                  .fontColor(this.editPetGender === opt ? '#FF6F00' : '#757575')
+                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                  .backgroundColor(this.editPetGender === opt ? '#FFF8E1' : '#FAFAFA')
+                  .borderRadius(12)
+                  .margin({ right: 6 })
+                  .onClick(() => { this.editPetGender = opt })
+              })
+            }
+          }
+
+          // 出生日期
+          Column() {
+            Text('生日')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            TextInput({ text: this.editPetBirthDate, placeholder: 'YYYY-MM-DD' })
+              .fontSize(14)
+              .width('100%')
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onChange((v: string) => { this.editPetBirthDate = v })
+          }
+          .width('100%')
+          .margin({ bottom: 12 })
+
+          // 颜色
+          Column() {
+            Text('颜色')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            TextInput({ text: this.editPetColor, placeholder: '毛色/颜色' })
+              .fontSize(14)
+              .width('100%')
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onChange((v: string) => { this.editPetColor = v })
+          }
+          .width('100%')
+          .margin({ bottom: 12 })
+
+          // 备注
+          Column() {
+            Text('备注')
+              .fontSize(13)
+              .fontColor('#757575')
+              .margin({ bottom: 4 })
+              .width('100%')
+            TextArea({ text: this.editPetNotes, placeholder: '备注信息...' })
+              .fontSize(14)
+              .height(70)
+              .width('100%')
+              .backgroundColor('#FAFAFA')
+              .borderRadius(8)
+              .onChange((v: string) => { this.editPetNotes = v })
+          }
+          .width('100%')
+          .margin({ bottom: 12 })
+        }
+        .padding({ left: 20, right: 20 })
+      }
+      .layoutWeight(1)
+
+      Row() {
+        Button('取消')
+          .fontSize(15)
+          .fontColor('#757575')
+          .layoutWeight(1)
+          .height(40)
+          .backgroundColor('#F5F5F5')
+          .borderRadius(20)
+          .onClick(() => { this.petVM.closeEditDialog() })
+
+        Button('保存')
+          .fontSize(15)
+          .fontColor('#FFFFFF')
+          .layoutWeight(1)
+          .height(40)
+          .backgroundColor('#FF6F00')
+          .borderRadius(20)
+          .margin({ left: 12 })
+          .onClick(() => { this.saveNewPet() })
+      }
+      .width('100%')
+      .padding({ left: 20, right: 20, bottom: 20 })
+    }
+    .width('90%')
+    .constraintSize({ maxHeight: '80%' })
+    .backgroundColor('#FFFFFF')
+    .borderRadius(16)
+    .position({ x: '5%', y: '10%' })
   }
 }

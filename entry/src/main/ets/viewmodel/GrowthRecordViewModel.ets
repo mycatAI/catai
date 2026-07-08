@@ -12,6 +12,15 @@ export interface ChartDataPoint {
 }
 
 /**
+ * ChartDataPoint 实现类（ArkTS 要求使用类而非对象字面量）
+ */
+export class ChartDataPointImpl implements ChartDataPoint {
+  label: string = ''
+  value: number = 0
+  date: string = ''
+}
+
+/**
  * 成长记录 ViewModel
  */
 @Observed
@@ -86,28 +95,38 @@ export class GrowthRecordViewModel {
    * 获取体重图表数据（按日期排序）
    */
   getWeightChartData(): ChartDataPoint[] {
-    return this.records
+    const result: ChartDataPoint[] = []
+    const sorted = this.records
       .filter(r => r.weight > 0)
       .sort((a, b) => DateUtil.compareDate(a.date, b.date))
-      .map(r => ({
-        label: r.date.substring(5), // MM-DD
-        value: r.weight,
-        date: r.date
-      }))
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i]
+      const point = new ChartDataPointImpl()
+      point.label = r.date.substring(5)
+      point.value = r.weight
+      point.date = r.date
+      result.push(point)
+    }
+    return result
   }
 
   /**
    * 获取身高图表数据（按日期排序）
    */
   getHeightChartData(): ChartDataPoint[] {
-    return this.records
+    const result: ChartDataPoint[] = []
+    const sorted = this.records
       .filter(r => r.height > 0)
       .sort((a, b) => DateUtil.compareDate(a.date, b.date))
-      .map(r => ({
-        label: r.date.substring(5),
-        value: r.height,
-        date: r.date
-      }))
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i]
+      const point = new ChartDataPointImpl()
+      point.label = r.date.substring(5)
+      point.value = r.height
+      point.date = r.date
+      result.push(point)
+    }
+    return result
   }
 
   /**

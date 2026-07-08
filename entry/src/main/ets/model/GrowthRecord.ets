@@ -21,9 +21,17 @@ export class GrowthRecord {
   /** 创建时间 */
   createTime: string = ''
 
-  constructor(data?: Partial<GrowthRecord>) {
+  constructor(data?: GrowthRecord) {
     if (data) {
-      Object.assign(this, data)
+      this.id = data.id ?? this.id
+      this.petId = data.petId ?? this.petId
+      this.date = data.date ?? this.date
+      this.weight = data.weight ?? this.weight
+      this.height = data.height ?? this.height
+      this.photo = data.photo ?? this.photo
+      this.notes = data.notes ?? this.notes
+      this.type = data.type ?? this.type
+      this.createTime = data.createTime ?? this.createTime
     }
   }
 }

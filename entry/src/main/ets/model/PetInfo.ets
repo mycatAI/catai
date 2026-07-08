@@ -29,9 +29,21 @@ export class PetInfo {
   /** 更新时间 */
   updateTime: string = ''
 
-  constructor(data?: Partial<PetInfo>) {
+  constructor(data?: PetInfo) {
     if (data) {
-      Object.assign(this, data)
+      this.id = data.id ?? this.id
+      this.name = data.name ?? this.name
+      this.species = data.species ?? this.species
+      this.breed = data.breed ?? this.breed
+      this.birthDate = data.birthDate ?? this.birthDate
+      this.gender = data.gender ?? this.gender
+      this.avatar = data.avatar ?? this.avatar
+      this.weight = data.weight ?? this.weight
+      this.height = data.height ?? this.height
+      this.color = data.color ?? this.color
+      this.notes = data.notes ?? this.notes
+      this.createTime = data.createTime ?? this.createTime
+      this.updateTime = data.updateTime ?? this.updateTime
     }
   }
 }

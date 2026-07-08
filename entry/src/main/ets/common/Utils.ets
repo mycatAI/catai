@@ -7,7 +7,7 @@ export class DateUtil {
    */
   static today(): string {
     const now = new Date()
-    return this.formatDate(now)
+    return DateUtil.formatDate(now)
   }
 
   /**
@@ -94,7 +94,7 @@ export class DateUtil {
   static addDays(dateStr: string, days: number): string {
     const date = new Date(dateStr)
     date.setDate(date.getDate() + days)
-    return this.formatDate(date)
+    return DateUtil.formatDate(date)
   }
 
   /**
@@ -103,7 +103,7 @@ export class DateUtil {
   static addMonths(dateStr: string, months: number): string {
     const date = new Date(dateStr)
     date.setMonth(date.getMonth() + months)
-    return this.formatDate(date)
+    return DateUtil.formatDate(date)
   }
 
   /**
@@ -112,7 +112,7 @@ export class DateUtil {
   static addYears(dateStr: string, years: number): string {
     const date = new Date(dateStr)
     date.setFullYear(date.getFullYear() + years)
-    return this.formatDate(date)
+    return DateUtil.formatDate(date)
   }
 }
 
@@ -140,6 +140,6 @@ export class ImageUtil {
    * 获取物种图标
    */
   static getSpeciesIcon(species: string): string {
-    return this.getDefaultAvatar(species)
+    return ImageUtil.getDefaultAvatar(species)
   }
 }

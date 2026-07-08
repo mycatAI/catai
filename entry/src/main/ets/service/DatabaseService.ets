@@ -1,6 +1,6 @@
 import { PetInfo } from '../model/PetInfo'
-import { GrowthRecord } from '../model/GrowthRecord'
-import { HealthReminder } from '../model/HealthReminder'
+import { GrowthRecord, GrowthRecordType } from '../model/GrowthRecord'
+import { HealthReminder, ReminderType, RepeatCycle } from '../model/HealthReminder'
 import { relationalStore } from '@kit.ArkData'
 import { BusinessError } from '@kit.BasicServicesKit'
 
@@ -172,21 +172,21 @@ export class DatabaseService {
       const resultSet = await this.store.query(predicates)
       const pets: PetInfo[] = []
       while (resultSet.goToNextRow()) {
-        pets.push(new PetInfo({
-          id: resultSet.getString(resultSet.getColumnIndex('id')),
-          name: resultSet.getString(resultSet.getColumnIndex('name')),
-          species: resultSet.getString(resultSet.getColumnIndex('species')),
-          breed: resultSet.getString(resultSet.getColumnIndex('breed')),
-          birthDate: resultSet.getString(resultSet.getColumnIndex('birth_date')),
-          gender: resultSet.getString(resultSet.getColumnIndex('gender')),
-          avatar: resultSet.getString(resultSet.getColumnIndex('avatar')),
-          weight: resultSet.getDouble(resultSet.getColumnIndex('weight')),
-          height: resultSet.getDouble(resultSet.getColumnIndex('height')),
-          color: resultSet.getString(resultSet.getColumnIndex('color')),
-          notes: resultSet.getString(resultSet.getColumnIndex('notes')),
-          createTime: resultSet.getString(resultSet.getColumnIndex('create_time')),
-          updateTime: resultSet.getString(resultSet.getColumnIndex('update_time'))
-        }))
+        const pet = new PetInfo()
+        pet.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        pet.name = resultSet.getString(resultSet.getColumnIndex('name'))
+        pet.species = resultSet.getString(resultSet.getColumnIndex('species'))
+        pet.breed = resultSet.getString(resultSet.getColumnIndex('breed'))
+        pet.birthDate = resultSet.getString(resultSet.getColumnIndex('birth_date'))
+        pet.gender = resultSet.getString(resultSet.getColumnIndex('gender'))
+        pet.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
+        pet.weight = resultSet.getDouble(resultSet.getColumnIndex('weight'))
+        pet.height = resultSet.getDouble(resultSet.getColumnIndex('height'))
+        pet.color = resultSet.getString(resultSet.getColumnIndex('color'))
+        pet.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        pet.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        pet.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
+        pets.push(pet)
       }
       resultSet.close()
       return pets
@@ -203,21 +203,20 @@ export class DatabaseService {
       predicates.equalTo('id', petId)
       const resultSet = await this.store.query(predicates)
       if (resultSet.goToFirstRow()) {
-        const pet = new PetInfo({
-          id: resultSet.getString(resultSet.getColumnIndex('id')),
-          name: resultSet.getString(resultSet.getColumnIndex('name')),
-          species: resultSet.getString(resultSet.getColumnIndex('species')),
-          breed: resultSet.getString(resultSet.getColumnIndex('breed')),
-          birthDate: resultSet.getString(resultSet.getColumnIndex('birth_date')),
-          gender: resultSet.getString(resultSet.getColumnIndex('gender')),
-          avatar: resultSet.getString(resultSet.getColumnIndex('avatar')),
-          weight: resultSet.getDouble(resultSet.getColumnIndex('weight')),
-          height: resultSet.getDouble(resultSet.getColumnIndex('height')),
-          color: resultSet.getString(resultSet.getColumnIndex('color')),
-          notes: resultSet.getString(resultSet.getColumnIndex('notes')),
-          createTime: resultSet.getString(resultSet.getColumnIndex('create_time')),
-          updateTime: resultSet.getString(resultSet.getColumnIndex('update_time'))
-        })
+        const pet = new PetInfo()
+        pet.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        pet.name = resultSet.getString(resultSet.getColumnIndex('name'))
+        pet.species = resultSet.getString(resultSet.getColumnIndex('species'))
+        pet.breed = resultSet.getString(resultSet.getColumnIndex('breed'))
+        pet.birthDate = resultSet.getString(resultSet.getColumnIndex('birth_date'))
+        pet.gender = resultSet.getString(resultSet.getColumnIndex('gender'))
+        pet.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
+        pet.weight = resultSet.getDouble(resultSet.getColumnIndex('weight'))
+        pet.height = resultSet.getDouble(resultSet.getColumnIndex('height'))
+        pet.color = resultSet.getString(resultSet.getColumnIndex('color'))
+        pet.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        pet.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        pet.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
         resultSet.close()
         return pet
       }
@@ -275,17 +274,17 @@ export class DatabaseService {
       const resultSet = await this.store.query(predicates)
       const records: GrowthRecord[] = []
       while (resultSet.goToNextRow()) {
-        records.push(new GrowthRecord({
-          id: resultSet.getString(resultSet.getColumnIndex('id')),
-          petId: resultSet.getString(resultSet.getColumnIndex('pet_id')),
-          date: resultSet.getString(resultSet.getColumnIndex('date')),
-          weight: resultSet.getDouble(resultSet.getColumnIndex('weight')),
-          height: resultSet.getDouble(resultSet.getColumnIndex('height')),
-          photo: resultSet.getString(resultSet.getColumnIndex('photo')),
-          notes: resultSet.getString(resultSet.getColumnIndex('notes')),
-          type: resultSet.getString(resultSet.getColumnIndex('type')) as GrowthRecordType,
-          createTime: resultSet.getString(resultSet.getColumnIndex('create_time'))
-        }))
+        const record = new GrowthRecord()
+        record.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        record.petId = resultSet.getString(resultSet.getColumnIndex('pet_id'))
+        record.date = resultSet.getString(resultSet.getColumnIndex('date'))
+        record.weight = resultSet.getDouble(resultSet.getColumnIndex('weight'))
+        record.height = resultSet.getDouble(resultSet.getColumnIndex('height'))
+        record.photo = resultSet.getString(resultSet.getColumnIndex('photo'))
+        record.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        record.type = resultSet.getString(resultSet.getColumnIndex('type')) as GrowthRecordType
+        record.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        records.push(record)
       }
       resultSet.close()
       return records
@@ -364,18 +363,18 @@ export class DatabaseService {
       const resultSet = await this.store.query(predicates)
       const reminders: HealthReminder[] = []
       while (resultSet.goToNextRow()) {
-        reminders.push(new HealthReminder({
-          id: resultSet.getString(resultSet.getColumnIndex('id')),
-          petId: resultSet.getString(resultSet.getColumnIndex('pet_id')),
-          type: resultSet.getString(resultSet.getColumnIndex('type')) as ReminderType,
-          title: resultSet.getString(resultSet.getColumnIndex('title')),
-          date: resultSet.getString(resultSet.getColumnIndex('date')),
-          time: resultSet.getString(resultSet.getColumnIndex('time')),
-          repeatCycle: resultSet.getString(resultSet.getColumnIndex('repeat_cycle')) as RepeatCycle,
-          enabled: resultSet.getLong(resultSet.getColumnIndex('enabled')) === 1,
-          notes: resultSet.getString(resultSet.getColumnIndex('notes')),
-          createTime: resultSet.getString(resultSet.getColumnIndex('create_time'))
-        }))
+        const reminder = new HealthReminder()
+        reminder.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        reminder.petId = resultSet.getString(resultSet.getColumnIndex('pet_id'))
+        reminder.type = resultSet.getString(resultSet.getColumnIndex('type')) as ReminderType
+        reminder.title = resultSet.getString(resultSet.getColumnIndex('title'))
+        reminder.date = resultSet.getString(resultSet.getColumnIndex('date'))
+        reminder.time = resultSet.getString(resultSet.getColumnIndex('time'))
+        reminder.repeatCycle = resultSet.getString(resultSet.getColumnIndex('repeat_cycle')) as RepeatCycle
+        reminder.enabled = resultSet.getLong(resultSet.getColumnIndex('enabled')) === 1
+        reminder.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        reminder.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        reminders.push(reminder)
       }
       resultSet.close()
       return reminders
@@ -394,18 +393,18 @@ export class DatabaseService {
       const resultSet = await this.store.query(predicates)
       const reminders: HealthReminder[] = []
       while (resultSet.goToNextRow()) {
-        reminders.push(new HealthReminder({
-          id: resultSet.getString(resultSet.getColumnIndex('id')),
-          petId: resultSet.getString(resultSet.getColumnIndex('pet_id')),
-          type: resultSet.getString(resultSet.getColumnIndex('type')) as ReminderType,
-          title: resultSet.getString(resultSet.getColumnIndex('title')),
-          date: resultSet.getString(resultSet.getColumnIndex('date')),
-          time: resultSet.getString(resultSet.getColumnIndex('time')),
-          repeatCycle: resultSet.getString(resultSet.getColumnIndex('repeat_cycle')) as RepeatCycle,
-          enabled: true,
-          notes: resultSet.getString(resultSet.getColumnIndex('notes')),
-          createTime: resultSet.getString(resultSet.getColumnIndex('create_time'))
-        }))
+        const reminder = new HealthReminder()
+        reminder.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        reminder.petId = resultSet.getString(resultSet.getColumnIndex('pet_id'))
+        reminder.type = resultSet.getString(resultSet.getColumnIndex('type')) as ReminderType
+        reminder.title = resultSet.getString(resultSet.getColumnIndex('title'))
+        reminder.date = resultSet.getString(resultSet.getColumnIndex('date'))
+        reminder.time = resultSet.getString(resultSet.getColumnIndex('time'))
+        reminder.repeatCycle = resultSet.getString(resultSet.getColumnIndex('repeat_cycle')) as RepeatCycle
+        reminder.enabled = true
+        reminder.notes = resultSet.getString(resultSet.getColumnIndex('notes'))
+        reminder.createTime = resultSet.getString(resultSet.getColumnIndex('create_time'))
+        reminders.push(reminder)
       }
       resultSet.close()
       return reminders

@@ -23,9 +23,18 @@ export class HealthReminder {
   /** 创建时间 */
   createTime: string = ''
 
-  constructor(data?: Partial<HealthReminder>) {
+  constructor(data?: HealthReminder) {
     if (data) {
-      Object.assign(this, data)
+      this.id = data.id ?? this.id
+      this.petId = data.petId ?? this.petId
+      this.type = data.type ?? this.type
+      this.title = data.title ?? this.title
+      this.date = data.date ?? this.date
+      this.time = data.time ?? this.time
+      this.repeatCycle = data.repeatCycle ?? this.repeatCycle
+      this.enabled = data.enabled ?? this.enabled
+      this.notes = data.notes ?? this.notes
+      this.createTime = data.createTime ?? this.createTime
     }
   }
 }

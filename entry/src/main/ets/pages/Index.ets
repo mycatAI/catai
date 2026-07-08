@@ -336,7 +336,7 @@ struct Index {
       .layoutWeight(1)
       .padding({ top: 8, bottom: 6 })
       .onClick(() => {
-        router.pushUrl({ url: 'pages/PetProfilePage', params: { petId: this.petVM.selectedPetId } })
+        router.pushUrl({ url: 'pages/MyPage' })
       })
     }
     .width('100%')

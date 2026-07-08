@@ -1,6 +1,7 @@
 import { PetInfo } from '../model/PetInfo'
 import { GrowthRecord, GrowthRecordType } from '../model/GrowthRecord'
 import { HealthReminder, ReminderType, RepeatCycle } from '../model/HealthReminder'
+import { UserInfo } from '../model/UserInfo'
 import { relationalStore } from '@kit.ArkData'
 import { BusinessError } from '@kit.BasicServicesKit'
 
@@ -58,6 +59,19 @@ const SQL_CREATE_HEALTH_REMINDER = `
   )
 `
 
+const SQL_CREATE_USER_INFO = `
+  CREATE TABLE IF NOT EXISTS user_info (
+    id TEXT PRIMARY KEY,
+    username TEXT DEFAULT '',
+    avatar TEXT DEFAULT '',
+    bio TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    join_date TEXT DEFAULT '',
+    update_time TEXT DEFAULT ''
+  )
+`
+
 /**
  * 本地数据库服务
  * 使用关系型数据库存储宠物的全部数据
@@ -82,6 +96,7 @@ export class DatabaseService {
       await this.store.executeSql(SQL_CREATE_PET_INFO)
       await this.store.executeSql(SQL_CREATE_GROWTH_RECORD)
       await this.store.executeSql(SQL_CREATE_HEALTH_REMINDER)
+      await this.store.executeSql(SQL_CREATE_USER_INFO)
       console.info('[DatabaseService] 数据库初始化成功')
     } catch (err) {
       console.error('[DatabaseService] 数据库初始化失败:', JSON.stringify(err))
@@ -411,6 +426,77 @@ export class DatabaseService {
     } catch (err) {
       console.error('[DatabaseService] queryAllEnabledReminders failed:', JSON.stringify(err))
       return []
+    }
+  }
+
+  // ==================== 用户信息 CRUD ====================
+
+  async insertUserInfo(user: UserInfo): Promise<boolean> {
+    if (!this.store) return false
+    try {
+      const valueBucket: relationalStore.ValuesBucket = {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        bio: user.bio,
+        phone: user.phone,
+        email: user.email,
+        join_date: user.joinDate,
+        update_time: user.updateTime
+      }
+      await this.store.insert('user_info', valueBucket)
+      return true
+    } catch (err) {
+      console.error('[DatabaseService] insertUserInfo failed:', JSON.stringify(err))
+      return false
+    }
+  }
+
+  async updateUserInfo(user: UserInfo): Promise<boolean> {
+    if (!this.store) return false
+    try {
+      const valueBucket: relationalStore.ValuesBucket = {
+        username: user.username,
+        avatar: user.avatar,
+        bio: user.bio,
+        phone: user.phone,
+        email: user.email,
+        update_time: user.updateTime
+      }
+      const predicates = new relationalStore.RdbPredicates('user_info')
+      predicates.equalTo('id', user.id)
+      await this.store.update(valueBucket, predicates)
+      return true
+    } catch (err) {
+      console.error('[DatabaseService] updateUserInfo failed:', JSON.stringify(err))
+      return false
+    }
+  }
+
+  async queryUserInfo(userId: string): Promise<UserInfo | null> {
+    if (!this.store) return null
+    try {
+      const predicates = new relationalStore.RdbPredicates('user_info')
+      predicates.equalTo('id', userId)
+      const resultSet = await this.store.query(predicates)
+      if (resultSet.goToFirstRow()) {
+        const user = new UserInfo()
+        user.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        user.username = resultSet.getString(resultSet.getColumnIndex('username'))
+        user.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
+        user.bio = resultSet.getString(resultSet.getColumnIndex('bio'))
+        user.phone = resultSet.getString(resultSet.getColumnIndex('phone'))
+        user.email = resultSet.getString(resultSet.getColumnIndex('email'))
+        user.joinDate = resultSet.getString(resultSet.getColumnIndex('join_date'))
+        user.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
+        resultSet.close()
+        return user
+      }
+      resultSet.close()
+      return null
+    } catch (err) {
+      console.error('[DatabaseService] queryUserInfo failed:', JSON.stringify(err))
+      return null
     }
   }
 }

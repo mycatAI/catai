@@ -1,6 +1,7 @@
 {
   "src": [
     "pages/Index",
+    "pages/MyPage",
     "pages/PetProfilePage",
     "pages/GrowthRecordPage",
     "pages/TimelinePage",

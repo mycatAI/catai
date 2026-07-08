@@ -135,24 +135,27 @@ struct Index {
         this.buildEmptyState()
       } else {
         // 主内容区域
-        Scroll() {
-          Column() {
-            // 当前宠物信息卡片
-            this.buildCurrentPetSection()
+        Column() {
+          Scroll() {
+            Column() {
+              // 当前宠物信息卡片
+              this.buildCurrentPetSection()
 
-            // 功能快捷入口
-            this.buildQuickActions()
+              // 今日待办提醒
+              this.buildTodayReminders()
 
-            // 今日待办提醒
-            this.buildTodayReminders()
-
-            // 最近成长记录
-            this.buildRecentRecords()
+              // 最近成长记录
+              this.buildRecentRecords()
+            }
+            .padding({ left: 16, right: 16, bottom: 16 })
           }
-          .padding({ left: 16, right: 16, bottom: 24 })
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
+
+          // 底部导航栏
+          this.buildBottomNav()
         }
         .layoutWeight(1)
-        .scrollBar(BarState.Off)
       }
     }
     .width('100%')
@@ -274,60 +277,72 @@ struct Index {
   }
 
   @Builder
-  private buildQuickActions(): void {
-    Column() {
-      Text('快捷功能')
-        .fontSize(15)
-        .fontWeight(FontWeight.Medium)
-        .fontColor('#424242')
-        .width('100%')
-        .margin({ top: 20, bottom: 12 })
-
-      Grid() {
-        GridItem() {
-          this.buildActionItem('📝', '成长记录', '#E3F2FD', () => {
-            router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
-          })
-        }
-        GridItem() {
-          this.buildActionItem('📸', '时间轴相册', '#E8F5E9', () => {
-            router.pushUrl({ url: 'pages/TimelinePage', params: { petId: this.petVM.selectedPetId } })
-          })
-        }
-        GridItem() {
-          this.buildActionItem('💉', '健康提醒', '#FCE4EC', () => {
-            router.pushUrl({ url: 'pages/HealthReminderPage', params: { petId: this.petVM.selectedPetId } })
-          })
-        }
-        GridItem() {
-          this.buildActionItem('📊', '成长趋势', '#F3E5F5', () => {
-            router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId, tab: 'chart' } })
-          })
-        }
+  private buildBottomNav(): void {
+    Row() {
+      // 成长记录
+      Column() {
+        Text('📝')
+          .fontSize(22)
+        Text('成长记录')
+          .fontSize(11)
+          .fontColor('#757575')
+          .margin({ top: 2 })
       }
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsGap(8)
-      .columnsGap(8)
-      .height(80)
-    }
-  }
+      .layoutWeight(1)
+      .padding({ top: 8, bottom: 6 })
+      .onClick(() => {
+        router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+      })
 
-  @Builder
-  private buildActionItem(icon: string, label: string, bgColor: string, onClick: () => void): void {
-    Column() {
-      Text(icon)
-        .fontSize(24)
-      Text(label)
-        .fontSize(11)
-        .fontColor('#616161')
-        .margin({ top: 2 })
+      // 时间轴
+      Column() {
+        Text('📸')
+          .fontSize(22)
+        Text('时间轴')
+          .fontSize(11)
+          .fontColor('#757575')
+          .margin({ top: 2 })
+      }
+      .layoutWeight(1)
+      .padding({ top: 8, bottom: 6 })
+      .onClick(() => {
+        router.pushUrl({ url: 'pages/TimelinePage', params: { petId: this.petVM.selectedPetId } })
+      })
+
+      // 健康提醒
+      Column() {
+        Text('💉')
+          .fontSize(22)
+        Text('健康提醒')
+          .fontSize(11)
+          .fontColor('#757575')
+          .margin({ top: 2 })
+      }
+      .layoutWeight(1)
+      .padding({ top: 8, bottom: 6 })
+      .onClick(() => {
+        router.pushUrl({ url: 'pages/HealthReminderPage', params: { petId: this.petVM.selectedPetId } })
+      })
+
+      // 我的
+      Column() {
+        Text('👤')
+          .fontSize(22)
+        Text('我的')
+          .fontSize(11)
+          .fontColor('#757575')
+          .margin({ top: 2 })
+      }
+      .layoutWeight(1)
+      .padding({ top: 8, bottom: 6 })
+      .onClick(() => {
+        router.pushUrl({ url: 'pages/PetProfilePage', params: { petId: this.petVM.selectedPetId } })
+      })
     }
     .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .backgroundColor(bgColor)
-    .borderRadius(10)
-    .onClick(onClick)
+    .padding({ top: 6, bottom: 8 })
+    .backgroundColor('#FFFFFF')
+    .shadow({ radius: 8, color: '#00000015', offsetX: 0, offsetY: -2 })
   }
 
   @Builder

@@ -7,6 +7,8 @@ export class UserInfo {
   id: string = 'default_user'
   /** 用户名/昵称 */
   username: string = ''
+  /** 密码 */
+  password: string = ''
   /** 用户头像URI */
   avatar: string = ''
   /** 个性签名 */
@@ -24,6 +26,7 @@ export class UserInfo {
     if (data) {
       this.id = data.id ?? this.id
       this.username = data.username ?? this.username
+      this.password = data.password ?? this.password
       this.avatar = data.avatar ?? this.avatar
       this.bio = data.bio ?? this.bio
       this.phone = data.phone ?? this.phone
@@ -33,3 +36,6 @@ export class UserInfo {
     }
   }
 }
+
+/** 当前登录用户ID（存储在 AppStorage 中） */
+export const CURRENT_USER_KEY = 'currentUserId'

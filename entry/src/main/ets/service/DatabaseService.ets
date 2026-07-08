@@ -64,6 +64,7 @@ const SQL_CREATE_USER_INFO = `
     id TEXT PRIMARY KEY,
     username TEXT DEFAULT '',
     avatar TEXT DEFAULT '',
+    password TEXT DEFAULT '',
     bio TEXT DEFAULT '',
     phone TEXT DEFAULT '',
     email TEXT DEFAULT '',
@@ -437,6 +438,7 @@ export class DatabaseService {
       const valueBucket: relationalStore.ValuesBucket = {
         id: user.id,
         username: user.username,
+        password: user.password,
         avatar: user.avatar,
         bio: user.bio,
         phone: user.phone,
@@ -457,6 +459,7 @@ export class DatabaseService {
     try {
       const valueBucket: relationalStore.ValuesBucket = {
         username: user.username,
+        password: user.password,
         avatar: user.avatar,
         bio: user.bio,
         phone: user.phone,
@@ -483,6 +486,7 @@ export class DatabaseService {
         const user = new UserInfo()
         user.id = resultSet.getString(resultSet.getColumnIndex('id'))
         user.username = resultSet.getString(resultSet.getColumnIndex('username'))
+        user.password = resultSet.getString(resultSet.getColumnIndex('password'))
         user.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
         user.bio = resultSet.getString(resultSet.getColumnIndex('bio'))
         user.phone = resultSet.getString(resultSet.getColumnIndex('phone'))
@@ -496,6 +500,35 @@ export class DatabaseService {
       return null
     } catch (err) {
       console.error('[DatabaseService] queryUserInfo failed:', JSON.stringify(err))
+      return null
+    }
+  }
+
+  /** 根据用户名查询用户（登录用） */
+  async queryUserByUsername(username: string): Promise<UserInfo | null> {
+    if (!this.store) return null
+    try {
+      const predicates = new relationalStore.RdbPredicates('user_info')
+      predicates.equalTo('username', username)
+      const resultSet = await this.store.query(predicates)
+      if (resultSet.goToFirstRow()) {
+        const user = new UserInfo()
+        user.id = resultSet.getString(resultSet.getColumnIndex('id'))
+        user.username = resultSet.getString(resultSet.getColumnIndex('username'))
+        user.password = resultSet.getString(resultSet.getColumnIndex('password'))
+        user.avatar = resultSet.getString(resultSet.getColumnIndex('avatar'))
+        user.bio = resultSet.getString(resultSet.getColumnIndex('bio'))
+        user.phone = resultSet.getString(resultSet.getColumnIndex('phone'))
+        user.email = resultSet.getString(resultSet.getColumnIndex('email'))
+        user.joinDate = resultSet.getString(resultSet.getColumnIndex('join_date'))
+        user.updateTime = resultSet.getString(resultSet.getColumnIndex('update_time'))
+        resultSet.close()
+        return user
+      }
+      resultSet.close()
+      return null
+    } catch (err) {
+      console.error('[DatabaseService] queryUserByUsername failed:', JSON.stringify(err))
       return null
     }
   }

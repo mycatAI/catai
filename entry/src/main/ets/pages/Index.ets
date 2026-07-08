@@ -4,11 +4,13 @@ import { ReminderViewModel } from '../viewmodel/ReminderViewModel'
 import { HealthReminder } from '../model/HealthReminder'
 import { GrowthRecord } from '../model/GrowthRecord'
 import { PetInfo, SPECIES_OPTIONS, GENDER_OPTIONS } from '../model/PetInfo'
+import { CURRENT_USER_KEY } from '../model/UserInfo'
 import { PetSelector } from '../components/PetSelector'
 import { PetCard } from '../components/PetCard'
 import { ReminderCard } from '../components/ReminderCard'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
+import { promptAction } from '@kit.ArkUI'
 import { DatabaseService } from '../service/DatabaseService'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
@@ -59,6 +61,17 @@ struct Index {
       await this.growthVM.loadRecords(this.petVM.selectedPetId)
       await this.reminderVM.loadReminders(this.petVM.selectedPetId)
     }
+  }
+
+  // 检查登录状态，未登录跳转登录页
+  isLoggedIn(): boolean {
+    const loginId = AppStorage.get<string>(CURRENT_USER_KEY)
+    if (!loginId) {
+      promptAction.showToast({ message: '请先登录后再使用此功能', duration: 2000 })
+      router.pushUrl({ url: 'pages/LoginPage' })
+      return false
+    }
+    return true
   }
 
   onPetSelected(petId: string): void {
@@ -266,8 +279,10 @@ struct Index {
         .borderRadius(12)
         .shadow({ radius: 4, color: '#00000010', offsetX: 0, offsetY: 2 })
         .onClick(() => {
-          router.pushUrl({ url: 'pages/PetProfilePage',
-            params: { petId: this.petVM.getCurrentPet()!.id } })
+          if (this.isLoggedIn()) {
+            router.pushUrl({ url: 'pages/PetProfilePage',
+              params: { petId: this.petVM.getCurrentPet()!.id } })
+          }
         })
       }
     }
@@ -288,7 +303,9 @@ struct Index {
       .layoutWeight(1)
       .padding({ top: 8, bottom: 6 })
       .onClick(() => {
-        router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+        if (this.isLoggedIn()) {
+          router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+        }
       })
 
       // 时间轴
@@ -303,7 +320,9 @@ struct Index {
       .layoutWeight(1)
       .padding({ top: 8, bottom: 6 })
       .onClick(() => {
-        router.pushUrl({ url: 'pages/TimelinePage', params: { petId: this.petVM.selectedPetId } })
+        if (this.isLoggedIn()) {
+          router.pushUrl({ url: 'pages/TimelinePage', params: { petId: this.petVM.selectedPetId } })
+        }
       })
 
       // 健康提醒
@@ -318,7 +337,9 @@ struct Index {
       .layoutWeight(1)
       .padding({ top: 8, bottom: 6 })
       .onClick(() => {
-        router.pushUrl({ url: 'pages/HealthReminderPage', params: { petId: this.petVM.selectedPetId } })
+        if (this.isLoggedIn()) {
+          router.pushUrl({ url: 'pages/HealthReminderPage', params: { petId: this.petVM.selectedPetId } })
+        }
       })
 
       // 我的
@@ -333,7 +354,9 @@ struct Index {
       .layoutWeight(1)
       .padding({ top: 8, bottom: 6 })
       .onClick(() => {
-        router.pushUrl({ url: 'pages/MyPage' })
+        if (this.isLoggedIn()) {
+          router.pushUrl({ url: 'pages/MyPage' })
+        }
       })
     }
     .width('100%')
@@ -402,7 +425,9 @@ struct Index {
           .fontSize(12)
           .fontColor('#FF6F00')
           .onClick(() => {
-            router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+            if (this.isLoggedIn()) {
+              router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+            }
           })
       }
       .width('100%')
@@ -422,7 +447,9 @@ struct Index {
         .backgroundColor('#FAFAFA')
         .borderRadius(8)
         .onClick(() => {
-          router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+          if (this.isLoggedIn()) {
+            router.pushUrl({ url: 'pages/GrowthRecordPage', params: { petId: this.petVM.selectedPetId } })
+          }
         })
       } else {
         Column() {

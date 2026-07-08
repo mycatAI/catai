@@ -1,4 +1,4 @@
-import { UserInfo } from '../model/UserInfo'
+import { UserInfo, CURRENT_USER_KEY } from '../model/UserInfo'
 import { PetInfo } from '../model/PetInfo'
 import { DatabaseService } from '../service/DatabaseService'
 import { DateUtil } from '../common/Utils'
@@ -28,17 +28,25 @@ struct MyPage {
 
   async loadData(): Promise<void> {
     const db = DatabaseService.getInstance()
+    // 检查登录状态
+    const loginId = AppStorage.get<string>(CURRENT_USER_KEY)
+    if (!loginId) {
+      // 未登录，显示空用户
+      this.user = new UserInfo()
+      this.user.username = '未登录'
+      this.user.bio = '点击下方登录，关联你的宠物'
+      this.pets = []
+      return
+    }
+
     // 加载用户信息
-    let user = await db.queryUserInfo('default_user')
+    let user = await db.queryUserInfo(loginId)
     if (!user) {
-      // 首次使用，创建默认用户
       user = new UserInfo()
-      user.id = 'default_user'
+      user.id = loginId
       user.username = '宠物家长'
       user.joinDate = DateUtil.today()
       user.updateTime = DateUtil.today()
-      await db.insertUserInfo(user)
-      this.isNewUser = true
     }
     this.user = user
 
@@ -358,15 +366,74 @@ struct MyPage {
     }
   }
 
+  // 退出登录
+  logout(): void {
+    AppStorage.setOrCreate(CURRENT_USER_KEY, '')
+    this.user = new UserInfo()
+    router.replaceUrl({ url: 'pages/Index' })
+  }
+
   @Builder
   private buildOtherLinks(): void {
     Column() {
-      Text('⚙️ 其他')
+      Text('账户管理')
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .fontColor('#424242')
         .width('100%')
         .margin({ top: 24, bottom: 12 })
+
+      // 登录/注册（未登录时显示）
+      if (!this.getLoginUserId()) {
+        Column() {
+          Row() {
+            Text('🔑')
+              .fontSize(18)
+            Text('登录 / 注册')
+              .fontSize(15)
+              .fontColor('#FF6F00')
+              .fontWeight(FontWeight.Medium)
+              .margin({ left: 10 })
+            Blank()
+            Image($r('sys.symbol.chevron_right'))
+              .width(16)
+              .height(16)
+              .fillColor('#FF6F00')
+          }
+          .width('100%')
+          .padding(14)
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/LoginPage' })
+          })
+        }
+        .width('100%')
+        .backgroundColor('#FFF8E1')
+        .borderRadius(12)
+        .margin({ bottom: 8 })
+      }
+
+      // 退出登录（已登录时显示）
+      if (this.getLoginUserId()) {
+        Column() {
+          Row() {
+            Text('🚪')
+              .fontSize(18)
+            Text('退出登录')
+              .fontSize(15)
+              .fontColor('#FF5252')
+              .fontWeight(FontWeight.Medium)
+              .margin({ left: 10 })
+            Blank()
+          }
+          .width('100%')
+          .padding(14)
+          .onClick(() => { this.logout() })
+        }
+        .width('100%')
+        .backgroundColor('#FFFFFF')
+        .borderRadius(12)
+        .margin({ bottom: 8 })
+      }
 
       Column() {
         Row() {
@@ -392,6 +459,12 @@ struct MyPage {
       .backgroundColor('#FFFFFF')
       .borderRadius(12)
     }
+  }
+
+  // 获取当前登录用户ID
+  private getLoginUserId(): string {
+    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
+    return uid || ''
   }
 
   @Builder

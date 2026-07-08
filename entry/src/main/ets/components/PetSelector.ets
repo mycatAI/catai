@@ -62,23 +62,20 @@ export struct PetSelector {
           Column() {
             Column() {
               Text('+')
-                .fontSize(28)
-                .fontColor('#BDBDBD')
+                .fontSize(32)
+                .fontColor('#FF6F00')
             }
-            .width(52)
-            .height(52)
-            .borderRadius(26)
-            .border({ width: 2, color: '#E0E0E0', style: BorderStyle.Dashed })
+            .width(56)
+            .height(56)
+            .borderRadius(28)
+            .border({ width: 2, color: '#FF6F00', style: BorderStyle.Dashed })
             .justifyContent(FlexAlign.Center)
-            .backgroundColor('#FAFAFA')
-
-            Text('添加')
-              .fontSize(12)
-              .fontColor('#BDBDBD')
-              .margin({ top: 4 })
+            .backgroundColor('#FFF8E1')
           }
-          .width(72)
+          .hitTestBehavior(HitTestMode.Block)
+          .width(80)
           .padding({ top: 8, bottom: 8 })
+          .borderRadius(12)
           .onClick(() => {
             if (this.onAdd) this.onAdd()
           })

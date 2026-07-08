@@ -125,37 +125,34 @@ struct Index {
 
       Divider().height(1).color('#F5F5F5')
 
-      // 添加/编辑宠物弹窗
-      if (this.petVM.showEditDialog) {
-        this.buildAddPetDialog()
-      }
-
       if (this.petVM.pets.length === 0) {
         // 空状态：没有宠物
         this.buildEmptyState()
       } else {
         // 主内容区域
-        Column() {
-          Scroll() {
-            Column() {
-              // 当前宠物信息卡片
-              this.buildCurrentPetSection()
+        Scroll() {
+          Column() {
+            // 当前宠物信息卡片
+            this.buildCurrentPetSection()
 
-              // 今日待办提醒
-              this.buildTodayReminders()
+            // 今日待办提醒
+            this.buildTodayReminders()
 
-              // 最近成长记录
-              this.buildRecentRecords()
-            }
-            .padding({ left: 16, right: 16, bottom: 16 })
+            // 最近成长记录
+            this.buildRecentRecords()
           }
-          .layoutWeight(1)
-          .scrollBar(BarState.Off)
-
-          // 底部导航栏
-          this.buildBottomNav()
+          .padding({ left: 16, right: 16, bottom: 16 })
         }
         .layoutWeight(1)
+        .scrollBar(BarState.Off)
+      }
+
+      // 底部导航栏（始终显示）
+      this.buildBottomNav()
+
+      // 添加/编辑宠物弹窗（放最后，确保渲染在最上层）
+      if (this.petVM.showEditDialog) {
+        this.buildAddPetDialog()
       }
     }
     .width('100%')
@@ -507,7 +504,7 @@ struct Index {
         })
     }
     .width('100%')
-    .height('100%')
+    .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
   }
 

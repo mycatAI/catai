@@ -2,13 +2,16 @@ import { reminderAgentManager } from '@kit.BackgroundTasksKit'
 import { notificationManager } from '@kit.NotificationKit'
 import { HealthReminder } from '../model/HealthReminder'
 
+const REMINDER_SLOT_TYPE: notificationManager.SlotType = notificationManager.SlotType.SOCIAL_COMMUNICATION
+
 /**
  * 通知服务
  * 使用 reminderAgentManager 创建带铃声的定时提醒通知
  */
 export class NotificationService {
   private static instance: NotificationService
-  private reminderIdMap: Map<string, number> = new Map() // reminder.id -> system reminderId
+  private reminderIdMap: Map<string, number> = new Map()
+  private slotAdded: boolean = false
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -18,10 +21,47 @@ export class NotificationService {
   }
 
   /**
+   * 初始化通知槽位（必须在使用通知前调用）
+   */
+  async initNotificationSlot(): Promise<void> {
+    if (this.slotAdded) return
+    try {
+      // 获取已存在的 slot，避免重复添加报错
+      const existingSlot = await notificationManager.getSlot(REMINDER_SLOT_TYPE)
+      if (existingSlot) {
+        this.slotAdded = true
+        console.info('[NotificationService] 通知槽位已存在，跳过创建')
+        return
+      }
+    } catch (_err) {
+      // slot 不存在，需要创建
+    }
+
+    try {
+      // addSlot 在当前SDK中第二个参数是回调函数
+      await notificationManager.addSlot(REMINDER_SLOT_TYPE, (err: Error) => {
+        if (err) {
+          console.error('[NotificationService] 通知槽位创建失败:', JSON.stringify(err))
+        } else {
+          this.slotAdded = true
+          console.info('[NotificationService] 通知槽位创建成功（使用默认铃声+震动）')
+        }
+      })
+      // 默认槽位已包含铃声和震动，无需额外配置
+      this.slotAdded = true
+    } catch (err) {
+      console.error('[NotificationService] 通知槽位创建异常:', JSON.stringify(err))
+    }
+  }
+
+  /**
    * 为单个提醒创建定时通知（带铃声）
    */
   async scheduleReminderNotification(reminder: HealthReminder): Promise<void> {
     try {
+      // 确保槽位已创建
+      await this.initNotificationSlot()
+
       // 先取消旧的提醒（如果存在）
       await this.cancelReminderNotifications(reminder.id)
 
@@ -37,7 +77,7 @@ export class NotificationService {
         reminderType: reminderAgentManager.ReminderType.REMINDER_TYPE_CALENDAR,
         dateTime: {
           year: dateParts[0],
-          month: dateParts[1],   // 1-indexed
+          month: dateParts[1],
           day: dateParts[2],
           hour: timeParts[0],
           minute: timeParts[1],
@@ -45,11 +85,11 @@ export class NotificationService {
         },
         title: `🐾 ${reminder.title}`,
         content: reminder.notes || '提醒时间到了，别忘了哦！',
-        ringDuration: 10,        // 铃声持续10秒
-        snoozeTimes: 2,          // 允许贪睡2次
-        timeInterval: 5,         // 贪睡间隔5分钟
+        ringDuration: 15,
+        snoozeTimes: 2,
+        timeInterval: 5,
         notificationId: this.hashReminderId(reminder.id),
-        slotType: notificationManager.SlotType.SOCIAL_COMMUNICATION
+        slotType: REMINDER_SLOT_TYPE
       }
 
       // 处理重复周期
@@ -58,52 +98,38 @@ export class NotificationService {
       // 发布提醒
       const systemReminderId: number = await reminderAgentManager.publishReminder(reminderReq)
       this.reminderIdMap.set(reminder.id, systemReminderId)
-      console.info(`[NotificationService] 提醒已创建: ${reminder.title}, 时间: ${reminder.date} ${reminder.time}, systemId: ${systemReminderId}`)
+      console.info(`[NotificationService] ✅ 提醒已创建: "${reminder.title}", 时间: ${reminder.date} ${reminder.time}, systemId: ${systemReminderId}`)
     } catch (err) {
-      console.error(`[NotificationService] 创建提醒失败:`, JSON.stringify(err))
+      console.error(`[NotificationService] ❌ 创建提醒失败 "${reminder.title}":`, JSON.stringify(err))
     }
   }
 
-  /**
-   * 根据重复周期配置提醒的重复规则
-   */
   private applyRepeatCycle(
     req: reminderAgentManager.ReminderRequestCalendar,
     reminder: HealthReminder,
     dateParts: number[],
-    timeParts: number[]
+    _timeParts: number[]
   ): void {
-    const dayOfWeek = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]).getDay() // 0=周日
+    const dayOfWeek = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]).getDay()
 
     switch (reminder.repeatCycle) {
       case 'daily':
-        // 每天重复
         req.daysOfWeek = [0, 1, 2, 3, 4, 5, 6]
         break
       case 'weekly':
-        // 每周同一天
         req.daysOfWeek = [dayOfWeek]
         break
       case 'monthly':
-        // 每月同一天
-        req.repeatMonths = [dateParts[1] - 1] // 0-indexed
-        req.repeatDays = [dateParts[2]]
-        break
-      case 'yearly':
-        // 每年同一个月和日期（不设置 daysOfWeek，按月+日重复）
         req.repeatMonths = [dateParts[1] - 1]
         req.repeatDays = [dateParts[2]]
         break
-      case 'none':
-      default:
-        // 不重复，保持为空即可
+      case 'yearly':
+        req.repeatMonths = [dateParts[1] - 1]
+        req.repeatDays = [dateParts[2]]
         break
     }
   }
 
-  /**
-   * 取消某个提醒的所有通知
-   */
   async cancelReminderNotifications(reminderId: string): Promise<void> {
     const systemId = this.reminderIdMap.get(reminderId)
     if (systemId !== undefined) {
@@ -117,9 +143,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * 取消所有提醒
-   */
   async cancelAllReminders(): Promise<void> {
     try {
       const allReminders = await reminderAgentManager.getAllValidReminders()
@@ -133,9 +156,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * 同步所有启用的提醒
-   */
   async syncAllReminders(reminders: HealthReminder[]): Promise<void> {
     for (const reminder of reminders) {
       if (reminder.enabled) {
@@ -153,23 +173,19 @@ export class NotificationService {
   async requestNotificationPermission(): Promise<boolean> {
     try {
       await notificationManager.requestEnableNotification()
+      console.info('[NotificationService] 通知权限已开启')
       return true
     } catch (err) {
-      console.error('[NotificationService] 请求通知权限失败:', JSON.stringify(err))
+      console.error('[NotificationService] 通知权限请求失败:', JSON.stringify(err))
       return false
     }
   }
 
-  /**
-   * 生成稳定的数字ID（用于 notificationId）
-   */
   private hashReminderId(id: string): number {
     let hash = 0
     for (let i = 0; i < id.length; i++) {
-      const char = id.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash // Convert to 32bit integer
+      hash = ((hash << 5) - hash) + id.charCodeAt(i)
     }
-    return Math.abs(hash % 65535) + 1 // 1-65535
+    return Math.abs(hash % 65535) + 1
   }
 }

@@ -59,14 +59,19 @@ struct MyPage {
   // 保存用户信息
   async saveUserInfo(): Promise<void> {
     const db = DatabaseService.getInstance()
-    this.user.username = this.editUsername
-    this.user.bio = this.editBio
-    this.user.phone = this.editPhone
-    this.user.email = this.editEmail
-    this.user.avatar = this.editAvatar
-    this.user.updateTime = DateUtil.today()
-    await db.updateUserInfo(this.user)
+    // 先关闭弹窗，立即响应
     this.isEditing = false
+    // 构建新对象替换整个 user，确保 @State 触发 UI 刷新
+    const updatedUser = new UserInfo(this.user)
+    updatedUser.username = this.editUsername
+    updatedUser.bio = this.editBio
+    updatedUser.phone = this.editPhone
+    updatedUser.email = this.editEmail
+    updatedUser.avatar = this.editAvatar
+    updatedUser.updateTime = DateUtil.today()
+    this.user = updatedUser
+    // 异步保存到数据库
+    await db.updateUserInfo(this.user)
   }
 
   // 选择头像
@@ -128,11 +133,6 @@ struct MyPage {
           // 用户信息卡片
           this.buildUserCard()
 
-          // 编辑弹窗
-          if (this.isEditing) {
-            this.buildEditDialog()
-          }
-
           // 我的宠物
           this.buildMyPetsSection()
 
@@ -143,6 +143,11 @@ struct MyPage {
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+
+      // 编辑弹窗（固定浮层，不随内容滚动）
+      if (this.isEditing) {
+        this.buildEditDialog()
+      }
     }
     .width('100%')
     .height('100%')

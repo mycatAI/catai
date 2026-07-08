@@ -1,6 +1,7 @@
 /**
  * 用户信息数据模型
  */
+@Observed
 export class UserInfo {
   /** 用户ID */
   id: string = 'default_user'

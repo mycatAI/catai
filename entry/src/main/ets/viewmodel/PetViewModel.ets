@@ -1,5 +1,5 @@
 import { PetInfo, SPECIES_OPTIONS, GENDER_OPTIONS } from '../model/PetInfo'
-import { ApiService } from '../service/ApiService'
+import { ApiService, PetBody } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 
 /**
@@ -106,18 +106,8 @@ export class PetViewModel {
     pet.updateTime = DateUtil.today()
     const isNew = !pet.id || !this.pets.some(p => p.id === pet.id)
 
-    const req = {
-      name: pet.name,
-      species: pet.species,
-      breed: pet.breed,
-      birthDate: pet.birthDate,
-      gender: pet.gender,
-      avatar: pet.avatar,
-      weight: pet.weight,
-      height: pet.height,
-      color: pet.color,
-      notes: pet.notes
-    }
+    const req = new PetBody(pet.name, pet.species, pet.breed, pet.birthDate,
+      pet.gender, pet.avatar, pet.weight, pet.height, pet.color, pet.notes)
 
     const result = isNew ?
       await this.api.createPet(req) :

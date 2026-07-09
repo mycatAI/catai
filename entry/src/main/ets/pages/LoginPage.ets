@@ -17,11 +17,7 @@ struct LoginPage {
   @State isLoading: boolean = false
 
   aboutToAppear(): void {
-    // 如果已经登录（有 token），跳过
-    const api = ApiService.getInstance()
-    if (api.isLoggedIn()) {
-      router.back()
-    }
+    // 不自动跳过，token 可能已过期，让用户重新登录
   }
 
   build() {

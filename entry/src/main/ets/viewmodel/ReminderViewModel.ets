@@ -1,5 +1,5 @@
 import { HealthReminder, ReminderType, REMINDER_TYPE_LABELS, REMINDER_TYPE_ICONS, RepeatCycle, REPEAT_CYCLE_LABELS } from '../model/HealthReminder'
-import { ApiService } from '../service/ApiService'
+import { ApiService, ReminderBody } from '../service/ApiService'
 import { NotificationService } from '../service/NotificationService'
 import { DateUtil } from '../common/Utils'
 
@@ -125,27 +125,18 @@ export class ReminderViewModel {
     }
     const isNew = !reminder.id || !this.reminders.some(r => r.id === reminder.id)
 
-    const req = {
-      type: reminder.type,
-      title: reminder.title,
-      date: reminder.date,
-      time: reminder.time,
-      repeatCycle: reminder.repeatCycle,
-      enabled: reminder.enabled,
-      notes: reminder.notes
-    }
+    const req = new ReminderBody(reminder.type, reminder.title, reminder.date,
+      reminder.time, reminder.repeatCycle, reminder.enabled, reminder.notes)
 
     const result = isNew ?
       await this.api.createReminder(this.petId, req) :
       await this.api.updateReminder(reminder.id, req)
 
     if (result) {
-      // 更新本地对象ID（新建时从服务端获取）
       if (isNew && result.id) {
         reminder.id = result.id
       }
       await this.loadReminders(this.petId)
-      // 同步本地通知
       if (result.enabled) {
         await this.notificationService.scheduleReminderNotification(result)
       }
@@ -155,20 +146,10 @@ export class ReminderViewModel {
     return false
   }
 
-  /**
-   * 切换提醒启用状态
-   */
   async toggleReminder(reminder: HealthReminder): Promise<void> {
     reminder.enabled = !reminder.enabled
-    const req = {
-      type: reminder.type,
-      title: reminder.title,
-      date: reminder.date,
-      time: reminder.time,
-      repeatCycle: reminder.repeatCycle,
-      enabled: reminder.enabled,
-      notes: reminder.notes
-    }
+    const req = new ReminderBody(reminder.type, reminder.title, reminder.date,
+      reminder.time, reminder.repeatCycle, reminder.enabled, reminder.notes)
     const result = await this.api.updateReminder(reminder.id, req)
     if (result) {
       if (result.enabled) {

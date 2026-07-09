@@ -7,10 +7,10 @@ import { FeedPostData } from './DatabaseService'
 import { router } from '@kit.ArkUI'
 import { promptAction } from '@kit.ArkUI'
 
-/** 服务端地址 — 开发时指向本机，真机调试改为电脑IP */
-const BASE_URL = 'http://127.0.0.1:8080/api'
+/** 服务端地址 — 鸿蒙模拟器用 10.0.2.2 访问宿主机，真机改为电脑IP */
+const BASE_URL = 'http://10.0.2.2:8080/api'
 
-/** JWT Token 存储 Key（使用 PersistentStorage 持久化到磁盘） */
+/** JWT Token 存储 Key */
 export const TOKEN_KEY = 'jwt_token'
 
 /** 通用 API 响应 */
@@ -28,9 +28,111 @@ interface LoginResponseData {
   avatar: string
 }
 
+// ==================== 请求体类 ====================
+
+class LoginBody {
+  username: string
+  password: string
+  constructor(username: string, password: string) {
+    this.username = username
+    this.password = password
+  }
+}
+
+class PetBody {
+  name: string
+  species: string
+  breed: string
+  birthDate: string
+  gender: string
+  avatar: string
+  weight: number
+  height: number
+  color: string
+  notes: string
+  constructor(name: string, species: string, breed: string, birthDate: string,
+    gender: string, avatar: string, weight: number, height: number,
+    color: string, notes: string) {
+    this.name = name
+    this.species = species
+    this.breed = breed
+    this.birthDate = birthDate
+    this.gender = gender
+    this.avatar = avatar
+    this.weight = weight
+    this.height = height
+    this.color = color
+    this.notes = notes
+  }
+}
+
+class RecordBody {
+  date: string
+  weight: number
+  height: number
+  photo: string
+  notes: string
+  type: string
+  constructor(date: string, weight: number, height: number, photo: string,
+    notes: string, type: string) {
+    this.date = date
+    this.weight = weight
+    this.height = height
+    this.photo = photo
+    this.notes = notes
+    this.type = type
+  }
+}
+
+class ReminderBody {
+  type: string
+  title: string
+  date: string
+  time: string
+  repeatCycle: string
+  enabled: boolean
+  notes: string
+  constructor(type: string, title: string, date: string, time: string,
+    repeatCycle: string, enabled: boolean, notes: string) {
+    this.type = type
+    this.title = title
+    this.date = date
+    this.time = time
+    this.repeatCycle = repeatCycle
+    this.enabled = enabled
+    this.notes = notes
+  }
+}
+
+class FeedBody {
+  topicId: string
+  content: string
+  constructor(topicId: string, content: string) {
+    this.topicId = topicId
+    this.content = content
+  }
+}
+
+class UserProfileBody {
+  username: string
+  bio: string
+  phone: string
+  email: string
+  avatar: string
+  topics: string
+  constructor(username: string, bio: string, phone: string, email: string,
+    avatar: string, topics: string) {
+    this.username = username
+    this.bio = bio
+    this.phone = phone
+    this.email = email
+    this.avatar = avatar
+    this.topics = topics
+  }
+}
+
 /**
  * 后端 API 服务（单例）
- * 替换原来的 DatabaseService 本地数据库调用
  */
 export class ApiService {
   private static instance: ApiService
@@ -62,33 +164,51 @@ export class ApiService {
     return token.length > 0
   }
 
-  // ==================== HTTP 通用方法 ====================
+  // ==================== HTTP — 每次新建，不设 timeout ====================
 
   private async request<T>(method: http.RequestMethod, path: string, body?: object): Promise<T | null> {
-    const httpRequest = http.createHttp()
+    const token = this.getToken()
+    const url = BASE_URL + path
+    let response: http.HttpResponse
+
     try {
-      const url = BASE_URL + path
-      const token = this.getToken()
-
-      const options: http.HttpRequestOptions = {
-        method: method,
-        header: {
-          'Content-Type': 'application/json'
-        },
-        connectTimeout: 10000,
-        readTimeout: 15000
+      const req = http.createHttp()
+      if (token.length > 0) {
+        if (body && (method === http.RequestMethod.POST || method === http.RequestMethod.PUT)) {
+          response = await req.request(url, {
+            method: method,
+            header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            extraData: JSON.stringify(body)
+          })
+        } else {
+          response = await req.request(url, {
+            method: method,
+            header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+          })
+        }
+      } else {
+        if (body && (method === http.RequestMethod.POST || method === http.RequestMethod.PUT)) {
+          response = await req.request(url, {
+            method: method,
+            header: { 'Content-Type': 'application/json' },
+            extraData: JSON.stringify(body)
+          })
+        } else {
+          response = await req.request(url, {
+            method: method,
+            header: { 'Content-Type': 'application/json' }
+          })
+        }
       }
+      req.destroy()
 
-      if (token) {
-        options.header!['Authorization'] = 'Bearer ' + token
+      const rawResult = response.result
+      let result: ApiResponse<T>
+      if (typeof rawResult === 'string') {
+        result = JSON.parse(rawResult as string) as ApiResponse<T>
+      } else {
+        result = rawResult as ApiResponse<T>
       }
-
-      if (body && (method === http.RequestMethod.POST || method === http.RequestMethod.PUT)) {
-        options.extraData = JSON.stringify(body)
-      }
-
-      const response = await httpRequest.request(url, options)
-      const result: ApiResponse<T> = JSON.parse(response.result as string)
 
       if (result.code === 200) {
         return result.data
@@ -98,16 +218,12 @@ export class ApiService {
         router.replaceUrl({ url: 'pages/LoginPage' })
         return null
       } else {
-        console.error('[ApiService] 请求失败:', result.code, result.message)
         promptAction.showToast({ message: result.message || '请求失败', duration: 2000 })
         return null
       }
     } catch (err) {
-      console.error('[ApiService] 网络错误:', JSON.stringify(err))
-      promptAction.showToast({ message: '网络连接失败，请检查网络', duration: 2000 })
+      promptAction.showToast({ message: '网络请求失败', duration: 2000 })
       return null
-    } finally {
-      httpRequest.destroy()
     }
   }
 
@@ -130,7 +246,8 @@ export class ApiService {
   // ==================== 认证 ====================
 
   async register(username: string, password: string): Promise<LoginResponseData | null> {
-    const result = await this.post<LoginResponseData>('/auth/register', { username, password })
+    const body = new LoginBody(username, password)
+    const result = await this.post<LoginResponseData>('/auth/register', body)
     if (result) {
       this.setToken(result.token)
       AppStorage.setOrCreate('currentUserId', result.userId)
@@ -139,7 +256,8 @@ export class ApiService {
   }
 
   async login(username: string, password: string): Promise<LoginResponseData | null> {
-    const result = await this.post<LoginResponseData>('/auth/login', { username, password })
+    const body = new LoginBody(username, password)
+    const result = await this.post<LoginResponseData>('/auth/login', body)
     if (result) {
       this.setToken(result.token)
       AppStorage.setOrCreate('currentUserId', result.userId)
@@ -162,7 +280,7 @@ export class ApiService {
     return null
   }
 
-  async updateUserProfile(req: object): Promise<UserInfo | null> {
+  async updateUserProfile(req: UserProfileBody): Promise<UserInfo | null> {
     const data = await this.put<UserInfo>('/users/me', req)
     if (data) {
       return new UserInfo(data)
@@ -182,12 +300,12 @@ export class ApiService {
     return data ? data : null
   }
 
-  async createPet(req: object): Promise<PetInfo | null> {
+  async createPet(req: PetBody): Promise<PetInfo | null> {
     const data = await this.post<PetInfo>('/pets', req)
     return data ? data : null
   }
 
-  async updatePet(id: string, req: object): Promise<PetInfo | null> {
+  async updatePet(id: string, req: PetBody): Promise<PetInfo | null> {
     const data = await this.put<PetInfo>('/pets/' + id, req)
     return data ? data : null
   }
@@ -215,7 +333,7 @@ export class ApiService {
         r.height = item.height ?? 0
         r.photo = item.photo ?? ''
         r.notes = item.notes ?? ''
-        r.type = item.type as GrowthRecordType ?? 'daily'
+        r.type = (item.type || 'daily') as GrowthRecordType
         r.createTime = item.createTime ?? ''
         return r
       })
@@ -223,7 +341,7 @@ export class ApiService {
     return []
   }
 
-  async createRecord(petId: string, req: object): Promise<GrowthRecord | null> {
+  async createRecord(petId: string, req: RecordBody): Promise<GrowthRecord | null> {
     const data = await this.post<GrowthRecord>('/pets/' + petId + '/records', req)
     if (data) {
       const r = new GrowthRecord()
@@ -234,7 +352,7 @@ export class ApiService {
       r.height = data.height ?? 0
       r.photo = data.photo ?? ''
       r.notes = data.notes ?? ''
-      r.type = data.type as GrowthRecordType ?? 'daily'
+      r.type = (data.type || 'daily') as GrowthRecordType
       r.createTime = data.createTime ?? ''
       return r
     }
@@ -255,11 +373,11 @@ export class ApiService {
         const r = new HealthReminder()
         r.id = item.id ?? ''
         r.petId = item.petId ?? petId
-        r.type = item.type as ReminderType ?? 'custom'
+        r.type = (item.type || 'custom') as ReminderType
         r.title = item.title ?? ''
         r.date = item.date ?? ''
         r.time = item.time ?? '09:00'
-        r.repeatCycle = item.repeatCycle as RepeatCycle ?? 'none'
+        r.repeatCycle = (item.repeatCycle || 'none') as RepeatCycle
         r.enabled = item.enabled ?? true
         r.notes = item.notes ?? ''
         r.createTime = item.createTime ?? ''
@@ -276,11 +394,11 @@ export class ApiService {
         const r = new HealthReminder()
         r.id = item.id ?? ''
         r.petId = item.petId ?? petId
-        r.type = item.type as ReminderType ?? 'custom'
+        r.type = (item.type || 'custom') as ReminderType
         r.title = item.title ?? ''
         r.date = item.date ?? ''
         r.time = item.time ?? '09:00'
-        r.repeatCycle = item.repeatCycle as RepeatCycle ?? 'none'
+        r.repeatCycle = (item.repeatCycle || 'none') as RepeatCycle
         r.enabled = item.enabled ?? true
         r.notes = item.notes ?? ''
         r.createTime = item.createTime ?? ''
@@ -297,11 +415,11 @@ export class ApiService {
         const r = new HealthReminder()
         r.id = item.id ?? ''
         r.petId = item.petId ?? petId
-        r.type = item.type as ReminderType ?? 'custom'
+        r.type = (item.type || 'custom') as ReminderType
         r.title = item.title ?? ''
         r.date = item.date ?? ''
         r.time = item.time ?? '09:00'
-        r.repeatCycle = item.repeatCycle as RepeatCycle ?? 'none'
+        r.repeatCycle = (item.repeatCycle || 'none') as RepeatCycle
         r.enabled = item.enabled ?? true
         r.notes = item.notes ?? ''
         r.createTime = item.createTime ?? ''
@@ -311,17 +429,17 @@ export class ApiService {
     return []
   }
 
-  async createReminder(petId: string, req: object): Promise<HealthReminder | null> {
+  async createReminder(petId: string, req: ReminderBody): Promise<HealthReminder | null> {
     const data = await this.post<HealthReminder>('/pets/' + petId + '/reminders', req)
     if (data) {
       const r = new HealthReminder()
       r.id = data.id ?? ''
       r.petId = data.petId ?? petId
-      r.type = data.type as ReminderType ?? 'custom'
+      r.type = (data.type || 'custom') as ReminderType
       r.title = data.title ?? ''
       r.date = data.date ?? ''
       r.time = data.time ?? '09:00'
-      r.repeatCycle = data.repeatCycle as RepeatCycle ?? 'none'
+      r.repeatCycle = (data.repeatCycle || 'none') as RepeatCycle
       r.enabled = data.enabled ?? true
       r.notes = data.notes ?? ''
       r.createTime = data.createTime ?? ''
@@ -330,17 +448,17 @@ export class ApiService {
     return null
   }
 
-  async updateReminder(id: string, req: object): Promise<HealthReminder | null> {
+  async updateReminder(id: string, req: ReminderBody): Promise<HealthReminder | null> {
     const data = await this.put<HealthReminder>('/reminders/' + id, req)
     if (data) {
       const r = new HealthReminder()
       r.id = data.id ?? ''
       r.petId = data.petId ?? ''
-      r.type = data.type as ReminderType ?? 'custom'
+      r.type = (data.type || 'custom') as ReminderType
       r.title = data.title ?? ''
       r.date = data.date ?? ''
       r.time = data.time ?? '09:00'
-      r.repeatCycle = data.repeatCycle as RepeatCycle ?? 'none'
+      r.repeatCycle = (data.repeatCycle || 'none') as RepeatCycle
       r.enabled = data.enabled ?? true
       r.notes = data.notes ?? ''
       r.createTime = data.createTime ?? ''
@@ -370,8 +488,10 @@ export class ApiService {
     return list || []
   }
 
-  async createFeedPost(req: object): Promise<FeedPostData | null> {
+  async createFeedPost(req: FeedBody): Promise<FeedPostData | null> {
     const data = await this.post<FeedPostData>('/feed', req)
     return data || null
   }
 }
+
+export { LoginBody, PetBody, RecordBody, ReminderBody, FeedBody, UserProfileBody }

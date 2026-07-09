@@ -1,5 +1,5 @@
 import { GrowthRecord, GrowthRecordType, GROWTH_TYPE_LABELS, GROWTH_TYPE_ICONS } from '../model/GrowthRecord'
-import { ApiService } from '../service/ApiService'
+import { ApiService, RecordBody } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 
 /**
@@ -67,14 +67,8 @@ export class GrowthRecordViewModel {
     if (!record.date) {
       record.date = DateUtil.today()
     }
-    const req = {
-      date: record.date,
-      weight: record.weight,
-      height: record.height,
-      photo: record.photo,
-      notes: record.notes,
-      type: record.type
-    }
+    const req = new RecordBody(record.date, record.weight, record.height,
+      record.photo, record.notes, record.type)
     const result = await this.api.createRecord(this.petId, req)
     if (result) {
       await this.loadRecords(this.petId)

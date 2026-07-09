@@ -1,7 +1,7 @@
 import { router } from '@kit.ArkUI'
 import { promptAction } from '@kit.ArkUI'
 import { CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
-import { ApiService } from '../service/ApiService'
+import { ApiService, FeedBody } from '../service/ApiService'
 import { FeedPostData } from '../service/DatabaseService'
 import { DateUtil } from '../common/Utils'
 
@@ -341,10 +341,7 @@ struct TopicFeedPage {
     }
     const api = ApiService.getInstance()
     // 后端自动从JWT获取userId、author、avatar
-    const result = await api.createFeedPost({
-      topicId: this.publishTopic,
-      content: content
-    })
+    const result = await api.createFeedPost(new FeedBody(this.publishTopic, content))
     if (result) {
       promptAction.showToast({ message: '发布成功！', duration: 1500 })
       this.showPublish = false

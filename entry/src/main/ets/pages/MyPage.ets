@@ -1,6 +1,6 @@
 import { UserInfo, CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
 import { PetInfo } from '../model/PetInfo'
-import { ApiService } from '../service/ApiService'
+import { ApiService, UserProfileBody } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
@@ -100,14 +100,8 @@ struct MyPage {
   async saveUserInfo(): Promise<void> {
     const api = ApiService.getInstance()
     this.isEditing = false
-    const req = {
-      username: this.editUsername,
-      bio: this.editBio,
-      phone: this.editPhone,
-      email: this.editEmail,
-      avatar: this.editAvatar,
-      topics: this.editTopics.join(',')
-    }
+    const req = new UserProfileBody(this.editUsername, this.editBio, this.editPhone,
+      this.editEmail, this.editAvatar, this.editTopics.join(','))
     const result = await api.updateUserProfile(req)
     if (result) {
       this.user = result

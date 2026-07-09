@@ -19,6 +19,13 @@
 .output/
 /.preview/
 
+# Backend (Spring Boot)
+backend/target/
+backend/data/
+backend/.mvn/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
 # OS
 .DS_Store
 Thumbs.db

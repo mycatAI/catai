@@ -1,5 +1,5 @@
-import { UserInfo, CURRENT_USER_KEY } from '../model/UserInfo'
-import { DatabaseService } from '../service/DatabaseService'
+import { UserInfo, CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
+import { ApiService } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 
@@ -17,9 +17,9 @@ struct LoginPage {
   @State isLoading: boolean = false
 
   aboutToAppear(): void {
-    // 如果已经登录，跳过
-    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
-    if (uid) {
+    // 如果已经登录（有 token），跳过
+    const api = ApiService.getInstance()
+    if (api.isLoggedIn()) {
       router.back()
     }
   }
@@ -177,26 +177,23 @@ struct LoginPage {
 
     this.isLoading = true
     try {
-      const db = DatabaseService.getInstance()
+      const api = ApiService.getInstance()
       // 检查用户名是否已存在
-      const existing = await db.queryUserByUsername(name)
-      if (existing) {
+      const exists = await api.checkUsername(name)
+      if (exists) {
         this.errorMsg = '用户名已被注册'
         this.isLoading = false
         return
       }
 
-      const user = new UserInfo()
-      user.id = DateUtil.generateId()
-      user.username = name
-      user.password = pwd
-      user.joinDate = DateUtil.today()
-      user.updateTime = DateUtil.today()
-      await db.insertUserInfo(user)
+      const result = await api.register(name, pwd)
+      if (!result) {
+        this.errorMsg = '注册失败，请重试'
+        this.isLoading = false
+        return
+      }
 
-      // 保存登录状态
-      AppStorage.setOrCreate(CURRENT_USER_KEY, user.id)
-
+      // Token 和 userId 已由 ApiService 自动保存
       router.back()
     } catch (err) {
       this.errorMsg = '注册失败，请重试'
@@ -214,22 +211,15 @@ struct LoginPage {
 
     this.isLoading = true
     try {
-      const db = DatabaseService.getInstance()
-      const user = await db.queryUserByUsername(name)
-      if (!user) {
-        this.errorMsg = '用户不存在，请先注册'
-        this.isLoading = false
-        return
-      }
-      if (user.password !== pwd) {
-        this.errorMsg = '密码错误'
+      const api = ApiService.getInstance()
+      const result = await api.login(name, pwd)
+      if (!result) {
+        this.errorMsg = '用户名或密码错误'
         this.isLoading = false
         return
       }
 
-      // 保存登录状态
-      AppStorage.setOrCreate(CURRENT_USER_KEY, user.id)
-
+      // Token 和 userId 已由 ApiService 自动保存
       router.back()
     } catch (err) {
       this.errorMsg = '登录失败，请重试'

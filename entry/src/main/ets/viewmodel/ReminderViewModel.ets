@@ -1,5 +1,5 @@
 import { HealthReminder, ReminderType, REMINDER_TYPE_LABELS, REMINDER_TYPE_ICONS, RepeatCycle, REPEAT_CYCLE_LABELS } from '../model/HealthReminder'
-import { DatabaseService } from '../service/DatabaseService'
+import { ApiService } from '../service/ApiService'
 import { NotificationService } from '../service/NotificationService'
 import { DateUtil } from '../common/Utils'
 
@@ -32,45 +32,49 @@ export class ReminderViewModel {
   /** 编辑中的提醒 */
   editingReminder: HealthReminder = new HealthReminder()
 
-  private db: DatabaseService = DatabaseService.getInstance()
+  private api: ApiService = ApiService.getInstance()
   private notificationService: NotificationService = NotificationService.getInstance()
+  /** 今日提醒缓存 */
+  private todayReminders: HealthReminder[] = []
+  /** 未来提醒缓存 */
+  private upcomingReminders: HealthReminder[] = []
 
   /**
-   * 加载提醒列表
+   * 加载提醒列表（从后端获取）
    */
   async loadReminders(petId: string): Promise<void> {
     this.petId = petId
     this.isLoading = true
     try {
-      this.reminders = await this.db.queryRemindersByPetId(petId)
+      this.reminders = await this.api.getReminders(petId)
+      // 同时加载今日和即将到期的提醒
+      this.todayReminders = await this.api.getTodayReminders(petId)
+      this.upcomingReminders = await this.api.getUpcomingReminders(petId)
     } finally {
       this.isLoading = false
     }
   }
 
   /**
-   * 获取今日待办提醒
+   * 获取今日待办提醒（由服务端过滤）
    */
   getTodayReminders(): HealthReminder[] {
-    const today = DateUtil.today()
-    return this.reminders.filter(r => r.enabled && r.date <= today)
+    return this.todayReminders
   }
 
   /**
-   * 获取即将到期的提醒（未来7天）
+   * 获取即将到期的提醒（未来7天，由服务端过滤）
    */
   getUpcomingReminders(): HealthReminder[] {
-    const today = DateUtil.today()
-    const future = DateUtil.addDays(today, 7)
-    return this.reminders.filter(r => r.enabled && r.date >= today && r.date <= future)
+    return this.upcomingReminders
   }
 
   /**
-   * 打开添加提醒弹窗
+   * 打开添加提醒弹窗（ID 由服务端分配）
    */
   openAddReminderDialog(): void {
     const reminder = new HealthReminder()
-    reminder.id = DateUtil.generateId()
+    reminder.id = '' // 服务端分配UUID
     reminder.petId = this.petId
     reminder.type = ReminderType.CUSTOM
     reminder.title = ''
@@ -112,26 +116,43 @@ export class ReminderViewModel {
   }
 
   /**
-   * 保存提醒
+   * 保存提醒（通过 API 创建或更新）
    */
   async saveReminder(): Promise<boolean> {
     const reminder = this.editingReminder
     if (!reminder.title.trim()) {
       return false
     }
-    const isNew = !this.reminders.some(r => r.id === reminder.id)
-    const success = isNew ?
-      await this.db.insertReminder(reminder) :
-      await this.db.updateReminder(reminder)
-    if (success) {
+    const isNew = !reminder.id || !this.reminders.some(r => r.id === reminder.id)
+
+    const req = {
+      type: reminder.type,
+      title: reminder.title,
+      date: reminder.date,
+      time: reminder.time,
+      repeatCycle: reminder.repeatCycle,
+      enabled: reminder.enabled,
+      notes: reminder.notes
+    }
+
+    const result = isNew ?
+      await this.api.createReminder(this.petId, req) :
+      await this.api.updateReminder(reminder.id, req)
+
+    if (result) {
+      // 更新本地对象ID（新建时从服务端获取）
+      if (isNew && result.id) {
+        reminder.id = result.id
+      }
       await this.loadReminders(this.petId)
-      // 同步通知
-      if (reminder.enabled) {
-        await this.notificationService.scheduleReminderNotification(reminder)
+      // 同步本地通知
+      if (result.enabled) {
+        await this.notificationService.scheduleReminderNotification(result)
       }
       this.closeEditDialog()
+      return true
     }
-    return success
+    return false
   }
 
   /**
@@ -139,20 +160,31 @@ export class ReminderViewModel {
    */
   async toggleReminder(reminder: HealthReminder): Promise<void> {
     reminder.enabled = !reminder.enabled
-    await this.db.updateReminder(reminder)
-    if (reminder.enabled) {
-      await this.notificationService.scheduleReminderNotification(reminder)
-    } else {
-      await this.notificationService.cancelReminderNotifications(reminder.id)
+    const req = {
+      type: reminder.type,
+      title: reminder.title,
+      date: reminder.date,
+      time: reminder.time,
+      repeatCycle: reminder.repeatCycle,
+      enabled: reminder.enabled,
+      notes: reminder.notes
     }
-    await this.loadReminders(this.petId)
+    const result = await this.api.updateReminder(reminder.id, req)
+    if (result) {
+      if (result.enabled) {
+        await this.notificationService.scheduleReminderNotification(result)
+      } else {
+        await this.notificationService.cancelReminderNotifications(result.id)
+      }
+      await this.loadReminders(this.petId)
+    }
   }
 
   /**
    * 删除提醒
    */
   async deleteReminder(reminderId: string): Promise<boolean> {
-    const success = await this.db.deleteReminder(reminderId)
+    const success = await this.api.deleteReminder(reminderId)
     if (success) {
       await this.notificationService.cancelReminderNotifications(reminderId)
       await this.loadReminders(this.petId)

@@ -42,3 +42,6 @@ export class UserInfo {
 
 /** 当前登录用户ID（存储在 AppStorage 中） */
 export const CURRENT_USER_KEY = 'currentUserId'
+
+/** JWT Token 存储 Key（由 PersistentStorage 持久化到磁盘） */
+export const TOKEN_KEY = 'jwt_token'

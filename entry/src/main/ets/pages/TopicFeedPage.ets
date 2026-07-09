@@ -1,7 +1,8 @@
 import { router } from '@kit.ArkUI'
 import { promptAction } from '@kit.ArkUI'
-import { CURRENT_USER_KEY } from '../model/UserInfo'
-import { DatabaseService, FeedPostData } from '../service/DatabaseService'
+import { CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
+import { ApiService } from '../service/ApiService'
+import { FeedPostData } from '../service/DatabaseService'
 import { DateUtil } from '../common/Utils'
 
 interface TopicTag {
@@ -53,20 +54,21 @@ struct TopicFeedPage {
 
   aboutToAppear(): void {
     // 登录检查
-    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
-    if (!uid) {
+    const api = ApiService.getInstance()
+    if (!api.isLoggedIn()) {
       promptAction.showToast({ message: '请先登录后再查看宠友圈', duration: 2000 })
       router.replaceUrl({ url: 'pages/LoginPage' })
       return
     }
-    this.currentUserId = uid
+    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
+    this.currentUserId = uid || ''
     this.loadFeeds()
   }
 
   async loadFeeds(): Promise<void> {
-    const db = DatabaseService.getInstance()
-    const dbPosts = await db.queryAllFeedPosts()
-    // 合并数据库帖子和示例帖子
+    const api = ApiService.getInstance()
+    const dbPosts = await api.getFeedPosts()
+    // 合并后端帖子和示例帖子
     this.allPosts = [...dbPosts, ...SAMPLE_FEEDS]
   }
 
@@ -337,27 +339,20 @@ struct TopicFeedPage {
       promptAction.showToast({ message: '请输入内容', duration: 1500 })
       return
     }
-    const db = DatabaseService.getInstance()
-    const user = await db.queryUserInfo(this.currentUserId)
-    const author = user ? user.username : '匿名用户'
-    const avatar = user && user.avatar ? user.avatar : '🐾'
-
-    const post: FeedPostData = {
-      id: 0,
-      userId: this.currentUserId,
+    const api = ApiService.getInstance()
+    // 后端自动从JWT获取userId、author、avatar
+    const result = await api.createFeedPost({
       topicId: this.publishTopic,
-      content: content,
-      author: author,
-      avatar: avatar,
-      likes: 0,
-      comments: 0,
-      createTime: DateUtil.today()
+      content: content
+    })
+    if (result) {
+      promptAction.showToast({ message: '发布成功！', duration: 1500 })
+      this.showPublish = false
+      this.publishContent = ''
+      await this.loadFeeds()
+    } else {
+      promptAction.showToast({ message: '发布失败，请重试', duration: 1500 })
     }
-    await db.insertFeedPost(post)
-    promptAction.showToast({ message: '发布成功！', duration: 1500 })
-    this.showPublish = false
-    this.publishContent = ''
-    await this.loadFeeds()
   }
 
   toggleTopic(topicId: string): void {

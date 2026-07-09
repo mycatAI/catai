@@ -1,5 +1,5 @@
 import { GrowthRecord, GrowthRecordType, GROWTH_TYPE_LABELS, GROWTH_TYPE_ICONS } from '../model/GrowthRecord'
-import { DatabaseService } from '../service/DatabaseService'
+import { ApiService } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 
 /**
@@ -34,21 +34,16 @@ export class GrowthRecordViewModel {
   /** 当前操作的宠物ID */
   petId: string = ''
 
-  private db: DatabaseService = DatabaseService.getInstance()
+  private api: ApiService = ApiService.getInstance()
 
   /**
-   * 加载成长记录
+   * 加载成长记录（从后端获取，支持按类型筛选）
    */
   async loadRecords(petId: string): Promise<void> {
     this.petId = petId
     this.isLoading = true
     try {
-      const allRecords = await this.db.queryGrowthRecordsByPetId(petId)
-      if (this.filterType === 'all') {
-        this.records = allRecords
-      } else {
-        this.records = allRecords.filter(r => r.type === this.filterType)
-      }
+      this.records = await this.api.getRecords(petId, this.filterType)
     } finally {
       this.isLoading = false
     }
@@ -65,26 +60,34 @@ export class GrowthRecordViewModel {
   }
 
   /**
-   * 添加成长记录
+   * 添加成长记录（ID 由服务端分配）
    */
   async addRecord(record: GrowthRecord): Promise<boolean> {
-    record.id = DateUtil.generateId()
     record.createTime = DateUtil.today()
     if (!record.date) {
       record.date = DateUtil.today()
     }
-    const success = await this.db.insertGrowthRecord(record)
-    if (success && this.petId) {
-      await this.loadRecords(this.petId)
+    const req = {
+      date: record.date,
+      weight: record.weight,
+      height: record.height,
+      photo: record.photo,
+      notes: record.notes,
+      type: record.type
     }
-    return success
+    const result = await this.api.createRecord(this.petId, req)
+    if (result) {
+      await this.loadRecords(this.petId)
+      return true
+    }
+    return false
   }
 
   /**
    * 删除成长记录
    */
   async deleteRecord(recordId: string): Promise<boolean> {
-    const success = await this.db.deleteGrowthRecord(recordId)
+    const success = await this.api.deleteRecord(recordId)
     if (success && this.petId) {
       await this.loadRecords(this.petId)
     }

@@ -178,7 +178,7 @@ struct HealthReminderPage {
   private async saveReminder(): Promise<void> {
     const isNew = !this.reminderVM.editingReminder.id
     const reminder = new HealthReminder()
-    reminder.id = this.reminderVM.editingReminder.id || DateUtil.generateId()
+    reminder.id = this.reminderVM.editingReminder.id // 新建时为空，由服务端分配
     reminder.petId = this.petId
     reminder.title = this.editTitle
     reminder.type = this.editType as ReminderType

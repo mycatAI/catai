@@ -4,14 +4,14 @@ import { ReminderViewModel } from '../viewmodel/ReminderViewModel'
 import { HealthReminder } from '../model/HealthReminder'
 import { GrowthRecord } from '../model/GrowthRecord'
 import { PetInfo, SPECIES_OPTIONS, GENDER_OPTIONS } from '../model/PetInfo'
-import { CURRENT_USER_KEY } from '../model/UserInfo'
+import { CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
+import { ApiService } from '../service/ApiService'
 import { PetSelector } from '../components/PetSelector'
 import { PetCard } from '../components/PetCard'
 import { ReminderCard } from '../components/ReminderCard'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 import { promptAction } from '@kit.ArkUI'
-import { DatabaseService } from '../service/DatabaseService'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
 
 @Entry
@@ -32,6 +32,8 @@ struct Index {
   @State editPetAvatar: string = ''
 
   aboutToAppear(): void {
+    // 持久化 JWT Token，确保重启后仍保持登录状态
+    PersistentStorage.persistProp(TOKEN_KEY, '')
     this.initData()
   }
 
@@ -41,12 +43,7 @@ struct Index {
   }
 
   async initData(): Promise<void> {
-    // 初始化数据库
-    const db = DatabaseService.getInstance()
-    const context = getContext(this)
-    await db.init(context)
-
-    // 加载数据
+    // 加载数据（由 ApiService 从后端获取）
     await this.petVM.loadPets()
     if (this.petVM.selectedPetId) {
       await this.growthVM.loadRecords(this.petVM.selectedPetId)
@@ -65,8 +62,8 @@ struct Index {
 
   // 检查登录状态，未登录跳转登录页
   isLoggedIn(): boolean {
-    const loginId = AppStorage.get<string>(CURRENT_USER_KEY)
-    if (!loginId) {
+    const api = ApiService.getInstance()
+    if (!api.isLoggedIn()) {
       promptAction.showToast({ message: '请先登录后再使用此功能', duration: 2000 })
       router.pushUrl({ url: 'pages/LoginPage' })
       return false
@@ -96,7 +93,9 @@ struct Index {
     const pet = this.petVM.editingPet
     // 绑定当前登录用户
     const uid = AppStorage.get<string>(CURRENT_USER_KEY)
-    if (uid) pet.userId = uid
+    if (uid) {
+      pet.userId = uid
+    }
     pet.name = this.editPetName
     pet.species = this.editPetSpecies
     pet.breed = this.editPetBreed

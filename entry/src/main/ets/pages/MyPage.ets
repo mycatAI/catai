@@ -1,6 +1,6 @@
-import { UserInfo, CURRENT_USER_KEY } from '../model/UserInfo'
+import { UserInfo, CURRENT_USER_KEY, TOKEN_KEY } from '../model/UserInfo'
 import { PetInfo } from '../model/PetInfo'
-import { DatabaseService } from '../service/DatabaseService'
+import { ApiService } from '../service/ApiService'
 import { DateUtil } from '../common/Utils'
 import { router } from '@kit.ArkUI'
 import { photoAccessHelper } from '@kit.MediaLibraryKit'
@@ -47,10 +47,9 @@ struct MyPage {
   }
 
   async loadData(): Promise<void> {
-    const db = DatabaseService.getInstance()
+    const api = ApiService.getInstance()
     // 检查登录状态
-    const loginId = AppStorage.get<string>(CURRENT_USER_KEY)
-    if (!loginId) {
+    if (!api.isLoggedIn()) {
       // 未登录，显示空用户
       this.user = new UserInfo()
       this.user.username = '未登录'
@@ -59,19 +58,19 @@ struct MyPage {
       return
     }
 
-    // 加载用户信息
-    let user = await db.queryUserInfo(loginId)
-    if (!user) {
-      user = new UserInfo()
-      user.id = loginId
-      user.username = '宠物家长'
-      user.joinDate = DateUtil.today()
-      user.updateTime = DateUtil.today()
+    // 从后端加载用户信息
+    const user = await api.getUserProfile()
+    if (user) {
+      this.user = user
+    } else {
+      this.user = new UserInfo()
+      this.user.username = '宠物家长'
+      this.user.joinDate = DateUtil.today()
+      this.user.updateTime = DateUtil.today()
     }
-    this.user = user
 
-    // 加载宠物列表
-    this.pets = await db.queryAllPets()
+    // 从后端加载宠物列表（按当前用户过滤）
+    this.pets = await api.getPets()
   }
 
   // 开始编辑个人信息
@@ -97,20 +96,33 @@ struct MyPage {
     this.editTopics = [...this.editTopics]
   }
 
-  // 保存用户信息
+  // 保存用户信息（通过 API 更新）
   async saveUserInfo(): Promise<void> {
-    const db = DatabaseService.getInstance()
+    const api = ApiService.getInstance()
     this.isEditing = false
-    const updatedUser = new UserInfo(this.user)
-    updatedUser.username = this.editUsername
-    updatedUser.bio = this.editBio
-    updatedUser.phone = this.editPhone
-    updatedUser.email = this.editEmail
-    updatedUser.avatar = this.editAvatar
-    updatedUser.topics = this.editTopics.join(',')
-    updatedUser.updateTime = DateUtil.today()
-    this.user = updatedUser
-    await db.updateUserInfo(this.user)
+    const req = {
+      username: this.editUsername,
+      bio: this.editBio,
+      phone: this.editPhone,
+      email: this.editEmail,
+      avatar: this.editAvatar,
+      topics: this.editTopics.join(',')
+    }
+    const result = await api.updateUserProfile(req)
+    if (result) {
+      this.user = result
+    } else {
+      // 即使失败也更新本地显示
+      const updatedUser = new UserInfo(this.user)
+      updatedUser.username = this.editUsername
+      updatedUser.bio = this.editBio
+      updatedUser.phone = this.editPhone
+      updatedUser.email = this.editEmail
+      updatedUser.avatar = this.editAvatar
+      updatedUser.topics = this.editTopics.join(',')
+      updatedUser.updateTime = DateUtil.today()
+      this.user = updatedUser
+    }
   }
 
   // 选择头像
@@ -404,7 +416,8 @@ struct MyPage {
 
   // 退出登录
   logout(): void {
-    AppStorage.setOrCreate(CURRENT_USER_KEY, '')
+    const api = ApiService.getInstance()
+    api.clearToken()
     this.user = new UserInfo()
     router.replaceUrl({ url: 'pages/Index' })
   }
@@ -535,8 +548,12 @@ struct MyPage {
 
   // 获取当前登录用户ID
   private getLoginUserId(): string {
-    const uid = AppStorage.get<string>(CURRENT_USER_KEY)
-    return uid || ''
+    const api = ApiService.getInstance()
+    if (api.isLoggedIn()) {
+      const uid = AppStorage.get<string>(CURRENT_USER_KEY)
+      return uid || ''
+    }
+    return ''
   }
 
   @Builder
